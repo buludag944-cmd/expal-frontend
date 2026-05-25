@@ -1,0 +1,22 @@
+{
+  "iconBackgroundColor": "#0f172a",
+  "iconBackgroundColorDark": "#0f172a",
+  "splashBackgroundColor": "#0f172a",
+  "splashBackgroundColorDark": "#0f172a",
+  "android": {
+    "icon": {
+      "sources": [{ "src": "resources/icon.png" }]
+    },
+    "splash": {
+      "sources": [{ "src": "resources/icon.png" }]
+    }
+  },
+  "ios": {
+    "icon": {
+      "sources": [{ "src": "resources/icon.png" }]
+    },
+    "splash": {
+      "sources": [{ "src": "resources/icon.png" }]
+    }
+  }
+}

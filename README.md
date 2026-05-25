@@ -1,5 +1,7 @@
 # Getting Started with Create React App
 
+**Production deployment:** [DEPLOY.md](./DEPLOY.md) · **Native / TestFlight / Play:** [CAPACITOR.md](./CAPACITOR.md)
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

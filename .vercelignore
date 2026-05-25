@@ -1,0 +1,11 @@
+# Native shells — not needed for the web SPA on Vercel
+ios/
+android/
+capacitor.config.ts
+assets.config.json
+CAPACITOR.md
+
+# Local artifacts (Vercel builds fresh)
+build/
+coverage/
+node_modules/

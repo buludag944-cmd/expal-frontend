@@ -1,0 +1,8 @@
+Download GoogleService-Info.plist from Firebase and save it HERE:
+
+  ios/App/App/GoogleService-Info.plist
+
+Firebase Console → Project expal-app-1ab1a → Add app → iOS
+Bundle ID: com.yourbrand.expal
+
+See ../../IOS_PUSH_SETUP.md for full steps.

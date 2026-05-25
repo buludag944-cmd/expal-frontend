@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">EXPal</string>
+    <string name="title_activity_main">EXPal</string>
+    <string name="package_name">com.yourbrand.expal</string>
+    <string name="custom_url_scheme">com.yourbrand.expal</string>
+</resources>

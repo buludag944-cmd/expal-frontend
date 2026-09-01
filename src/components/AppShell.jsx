@@ -1,130 +1,157 @@
 import React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  BookOpen,
-  Calendar,
+  Bell,
+  Compass,
   Home,
-  House,
-  Lightbulb,
   LogOut,
+  Map,
   MessageSquare,
   Search,
-  Share2,
   User,
   Users,
 } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import AppLogo from "./AppLogo";
 import ThemeToggle from "./ThemeToggle";
+import AiChatWidget from "./AiChatWidget";
 import Avatar from "./ui/Avatar";
-import Button from "./ui/Button";
-import { cn } from "../lib/cn";
+import { isNativeApp, getNativePlatform } from "../lib/platform";
+import { useNativeFormFactor } from "../hooks/useNativeFormFactor";
+import MobileBottomTabBar from "./mobile/MobileBottomTabBar";
+import { useRouteSwipe } from "../hooks/useSwipeNav";
+import Walkthrough from "./Walkthrough";
+import "../styles/mobile-app.css";
 
 const navItems = [
   { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/events", label: "Events", icon: Calendar },
-  { to: "/housing", label: "Housing", icon: House },
-  { to: "/referrals", label: "Referrals", icon: Share2 },
+  { to: "/explore", label: "Explore", icon: Compass },
+  { to: "/community", label: "Community", icon: Users },
+  { to: "/journey", label: "Journey", icon: Map },
   { to: "/messages", label: "Messages", icon: MessageSquare },
-  { to: "/essentials", label: "Essentials", icon: BookOpen },
-  { to: "/knowhow", label: "Know-How", icon: Lightbulb },
+  { to: "/notifications", label: "Alerts", icon: Bell },
   { to: "/profile", label: "Profile", icon: User },
 ];
 
 const mobileTabs = [
   { to: "/", label: "Home", icon: Home, end: true },
-  { to: "/events", label: "Events", icon: Calendar },
-  { to: "/housing", label: "Housing", icon: House },
-  { to: "/messages", label: "Messages", icon: MessageSquare },
+  { to: "/explore", label: "Explore", icon: Compass },
+  { to: "/community", label: "Community", icon: Users },
+  { to: "/journey", label: "Journey", icon: Map },
   { to: "/profile", label: "Profile", icon: User },
 ];
 
-const navIconClass = {
-  "/": "icon-ev",
-  "/events": "icon-ev",
-  "/housing": "icon-ho",
-  "/referrals": "icon-rf",
-  "/messages": "icon-ms",
-  "/essentials": "icon-es",
-  "/knowhow": "icon-kh",
-  "/profile": "",
-};
-
-function navClass({ isActive }) {
-  return cn(
-    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ease-out min-h-[44px]",
-    isActive
-      ? "bg-surface text-foreground shadow-sm"
-      : "text-muted hover:bg-surface hover:text-foreground"
+function SidebarLink({ to, end, label, icon: Icon }) {
+  return (
+    <NavLink to={to} end={end} className={({ isActive }) => (isActive ? "active" : undefined)}>
+      <Icon className="h-5 w-5 shrink-0" style={{ color: "var(--ev-accent)" }} aria-hidden />
+      {label}
+    </NavLink>
   );
 }
 
-const mobileIconClass = {
-  "/": "icon-ev",
-  "/events": "icon-ev",
-  "/housing": "icon-ho",
-  "/messages": "icon-ms",
-  "/profile": "",
-};
+function MobileNavLink({ to, end, label, icon: Icon }) {
+  return (
+    <NavLink to={to} end={end} className={({ isActive }) => (isActive ? "active" : undefined)}>
+      <span className="nav-icon-wrap">
+        <Icon className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+      </span>
+      <span className="nav-label">{label}</span>
+    </NavLink>
+  );
+}
 
-function mobileTabClass({ isActive }, to) {
-  const accent =
-    to === "/housing"
-      ? "border-ho text-ho"
-      : to === "/messages"
-        ? "border-ms text-ms"
-        : to === "/events" || to === "/"
-          ? "border-ev text-ev"
-          : "border-primary text-primary";
-  return cn(
-    "flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition ease-out min-h-[44px]",
-    isActive ? `border-t-2 ${accent}` : "text-muted"
+/** Main tab pages: edge-only swipe between bottom tabs (see useRouteSwipe). */
+function NativeShell({ children }) {
+  const { user } = useAuth();
+  const { onTouchStart, onTouchMove, onTouchEnd } = useRouteSwipe();
+  const platform = getNativePlatform();
+  const formFactor = useNativeFormFactor();
+  const shellClass = [
+    "mob-app",
+    "mob-shell",
+    platform === "ios" ? "mob-platform-ios" : "",
+    platform === "android" ? "mob-platform-android" : "",
+    formFactor === "tablet" ? "mob-form-factor-tablet" : "mob-form-factor-phone",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      className={shellClass}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      <main className="mob-main">
+        <div className="mob-route-root">{children}</div>
+      </main>
+      <MobileBottomTabBar />
+      <AiChatWidget />
+      <Walkthrough enabled={!!user?.onboardingComplete} />
+    </div>
   );
 }
 
 export default function AppShell({ children, guest = false, guestSubtitle }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const native = isNativeApp();
   const displayName = user
     ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email
     : "";
 
+  if (native && !guest) {
+    return <NativeShell>{children}</NativeShell>;
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="mx-auto flex h-14 max-w-screen-2xl items-center gap-3 px-4 md:h-16 md:px-6">
-          <Link to="/" className="font-semibold text-foreground shrink-0" aria-label="EXPal home">
-            <AppLogo size={36} showText />
+    <div className="min-h-screen expal-screen">
+      <header className="expal-header sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
+        <div className="relative z-10 mx-auto flex max-w-screen-2xl items-center justify-between gap-3 px-5 py-4 md:px-6">
+          <Link to="/" className="logo flex items-center gap-2.5 shrink-0 no-underline text-white" aria-label="Expal home">
+            <AppLogo size={44} variant="header" />
+            <div>
+              <h1 className="font-display text-[22px] font-bold m-0 leading-tight tracking-tight">Expal</h1>
+              <div className="expal-motto">
+                {guest ? guestSubtitle || "Your friend away from home" : "Your friend away from home"}
+              </div>
+            </div>
           </Link>
-          <p className="hidden flex-1 truncate text-sm text-muted lg:block">
-            {guest ? guestSubtitle : `Welcome, ${displayName}`}
-          </p>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="flex items-center gap-1">
             {!guest && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hidden md:inline-flex"
+              <button
+                type="button"
                 onClick={() => navigate("/search")}
-                aria-label="Search profiles"
+                className="hidden md:inline-flex h-11 w-11 items-center justify-center rounded-xl text-white/90 hover:bg-white/15"
+                aria-label="Search"
               >
                 <Search className="h-5 w-5" />
-              </Button>
+              </button>
             )}
-            <ThemeToggle />
+            <ThemeToggle onHeader mode="cycle" />
             {!guest && user && (
               <>
-                <Link to="/profile" className="hidden sm:block" aria-label="Profile">
-                  <Avatar
-                    src={user.profileImage}
-                    name={displayName}
-                    size="sm"
-                  />
+                <Link
+                  to="/notifications"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-white/90 hover:bg-white/15"
+                  aria-label="Notifications"
+                >
+                  <Bell className="h-5 w-5" />
                 </Link>
-                <Button variant="ghost" size="sm" onClick={logout} className="hidden md:inline-flex gap-2">
+                <Link to="/profile" className="hidden sm:block rounded-full ring-2 ring-white/30" aria-label="Profile">
+                  <Avatar src={user.profileImage} name={displayName} size="sm" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="inline-flex items-center gap-2 rounded-xl px-2.5 md:px-3 py-2 text-sm font-medium text-white/95 hover:bg-white/15 min-h-[44px] min-w-[44px] font-display justify-center"
+                  aria-label="Log out"
+                >
                   <LogOut className="h-4 w-4" />
-                  Logout
-                </Button>
+                  <span className="hidden md:inline">Logout</span>
+                </button>
               </>
             )}
           </div>
@@ -133,44 +160,28 @@ export default function AppShell({ children, guest = false, guestSubtitle }) {
 
       <div className="mx-auto flex max-w-screen-2xl">
         {!guest && (
-          <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border bg-card p-4 lg:w-60">
-            <nav className="flex flex-col gap-1" aria-label="Main">
-              {navItems.map(({ to, label, icon: Icon, end }) => (
-                <NavLink key={to} to={to} end={end} className={navClass}>
-                  <Icon className={cn("h-5 w-5 shrink-0", navIconClass[to])} aria-hidden />
-                  {label}
-                </NavLink>
+          <aside className="expal-sidebar" aria-label="Main">
+            <nav className="flex flex-col gap-1">
+              {navItems.map(({ to, label, icon, end }) => (
+                <SidebarLink key={to} to={to} end={end} label={label} icon={icon} />
               ))}
-              <NavLink to="/search" className={navClass}>
-                <Users className="h-5 w-5 shrink-0" aria-hidden />
-                Search
-              </NavLink>
-              <NavLink to="/users" className={navClass}>
-                <Users className="h-5 w-5 shrink-0" aria-hidden />
-                Users
-              </NavLink>
             </nav>
           </aside>
         )}
 
-        <main className={cn("flex-1 min-w-0 page-container", !guest && "pb-20 md:pb-8")}>
-          {children}
-        </main>
+        <main className="flex-1 min-w-0 page-container">{children}</main>
       </div>
 
       {!guest && (
-        <nav
-          className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-card md:hidden"
-          aria-label="Mobile"
-        >
-          {mobileTabs.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={(state) => mobileTabClass(state, to)}>
-              <Icon className={cn("h-5 w-5", mobileIconClass[to])} aria-hidden />
-              {label}
-            </NavLink>
+        <nav className="expal-bottom-nav md:hidden" aria-label="Mobile">
+          {mobileTabs.map(({ to, label, icon, end }) => (
+            <MobileNavLink key={to} to={to} end={end} label={label} icon={icon} />
           ))}
         </nav>
       )}
+
+      {!guest && <AiChatWidget />}
+      {!guest && <Walkthrough enabled={!!user?.onboardingComplete} />}
     </div>
   );
 }

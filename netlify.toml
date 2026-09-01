@@ -1,5 +1,6 @@
 [build]
-  command = "npm run build"
+  # Generates public/*.png from resources/expal_logo.png (needs committed resources/)
+  command = "node scripts/ensure-logo.js && npm run build"
   publish = "build"
 
 [[redirects]]

@@ -1,6 +1,9 @@
 # Production deployment (EXPal SPA)
 
-Deploy the static build from this folder. All routing is client-side (React Router).
+**Live site:** https://expalapp.netlify.app  
+**API:** https://expalapp-1.onrender.com (set in `.env.production` as `REACT_APP_API_URL`)
+
+Deploy the static build from this folder. All routing is client-side (React Router), including `/onboarding`, `/journey`, `/community`, and `/explore`.
 
 ## Workflow (in order)
 
@@ -9,15 +12,29 @@ Deploy the static build from this folder. All routing is client-side (React Rout
 3. **Deploy** the contents of `frontend/build/` to your HTTPS host.
 4. **Enable SPA fallback** so unknown paths serve `index.html` (see below).
 
-## 1. Production API base (before build)
+## 1. Production env (before build)
 
-Edit `.env.production` **before** running `npm run build`:
+Create React App **inlines env at build time**. Set these in **Netlify → Site configuration → Environment variables** (for Git deploys) or in `.env.production` (for local `npm run build` + drag-and-drop).
 
 ```env
-REACT_APP_API_URL=https://api.yourdomain.com
+REACT_APP_API_URL=https://expalapp-1.onrender.com
+
+# Required for “Continue with Google” on the Login screen
+REACT_APP_FIREBASE_API_KEY=...
+REACT_APP_FIREBASE_AUTH_DOMAIN=expalapp-a6422.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=expalapp-a6422
+REACT_APP_FIREBASE_APP_ID=...
 ```
 
-Use a fully qualified URL with **`https://`** (or `http://` only for LAN testing). Create React App inlines this at build time — change the env, then rebuild and redeploy.
+Copy Firebase Web values from [Firebase Console](https://console.firebase.google.com) → **expalapp-a6422** → Project settings → Your apps → **Web** (`</>`). If there is no Web app yet, click **Add app** → Web.
+
+**Import from a file:** use `frontend/.env.netlify` (local, gitignored) or copy `netlify.env.import.example` → `.env.netlify`, fill secrets, then in Netlify: **Site configuration → Environment variables → Import from a .env file** → choose that file → confirm → **Clear cache and deploy**.
+
+After changing env on Netlify, trigger **Deploys → Trigger deploy → Clear cache and deploy site**.
+
+**Login screen only:** the Google button appears on **Login**, not **Sign Up** (link at the bottom switches tabs).
+
+**If the button is missing after deploy:** the live JS bundle may be an old build. Open DevTools → Network → `main.*.js` → search for `Continue with Google`. If it is not there, redeploy from the latest repo (see §3) — do not re-upload an old `build/` folder.
 
 ## 2. Build
 
@@ -25,6 +42,14 @@ Use a fully qualified URL with **`https://`** (or `http://` only for LAN testing
 cd frontend
 npm run build
 ```
+
+**Logo on Netlify:** The header/login logo is bundled from `src/assets/expal-logo.png` (content-hashed filename). After changing the logo, run `npm run logo:apply` on a Mac, then **commit and push**:
+
+- `src/assets/expal-logo.png`
+- `public/expal-logo.png`, `public/logo192.png`, `public/logo512.png`
+- `resources/expal_logo.png` (master)
+
+If you deploy by dragging `build/` to Netlify, run a **fresh** `npm run build` first — do not re-upload an old `build/` folder.
 
 Artifact: **`frontend/build/`** (`index.html`, `static/`, assets from `public/`, including **`build/.well-known/`** for iOS/Android deep links).
 
@@ -67,7 +92,7 @@ npm run build
 
 **Git-connected deploy (optional):** connect the repo; set **Base directory** to `frontend`, **Build command** `npm run build`, **Publish directory** `build`. `netlify.toml` in `frontend/` applies the same SPA rules.
 
-Sanity routes after deploy: `/verify/test`, `/reset/test` (must load the app, not a Netlify 404).
+Sanity routes after deploy: `/`, `/onboarding`, `/journey`, `/verify/test`, `/reset/test` (must load the app, not a Netlify 404).
 
 - **Vercel** — optional; see `vercel.json` if you switch hosts later.
 - **Netlify** — [SPA rewrites](https://docs.netlify.com/routing/redirects/rewrites-for-proxies/#history-push-api-and-single-page-apps); default CRA setups usually need no extra config.
@@ -111,13 +136,26 @@ Open these URLs on your live host (replace domain):
 
 ## 6. Backend alignment
 
-- Backend **`CLIENT_URL`** = same SPA origin (e.g. `https://app.yourdomain.com`) for email verify/reset links.
+- Backend **`CLIENT_URL`** = same SPA origin (e.g. `https://expalapp.netlify.app`) for email verify/reset links.
 - API reachable at the same host as `REACT_APP_API_URL`, over HTTPS.
+- **`FIREBASE_SERVICE_ACCOUNT_JSON`** on Render (service account for **expalapp-a6422**, one line) — required for `POST /api/auth/google` after Google sign-in succeeds in the browser.
+
+## 7. Google sign-in (Firebase)
+
+1. **Authentication → Sign-in method** — enable **Google** (support email: `expalappsupport@gmail.com`).
+2. **Authentication → Settings → Authorized domains** — add `expalapp.netlify.app` and `localhost`.
+3. Set all four `REACT_APP_FIREBASE_*` vars on Netlify (§1), then redeploy.
+4. On the live site, use the **Login** tab; you should see **or** and **Continue with Google**.
+
+See `SOCIAL_AUTH.md` in the repo root for the full flow.
 
 ## Checklist
 
-- [ ] `REACT_APP_API_URL=https://api.yourdomain.com` in `.env.production`
-- [ ] `npm run build` succeeded
-- [ ] `build/` deployed over HTTPS
+- [ ] `REACT_APP_API_URL` set on Netlify (or `.env.production`)
+- [ ] All four `REACT_APP_FIREBASE_*` set on Netlify, then **clear-cache redeploy**
+- [ ] `npm run build` succeeded (Git or local)
+- [ ] `build/` deployed over HTTPS (not the whole monorepo — only `frontend/build/`)
 - [ ] SPA fallback enabled
 - [ ] `/verify/test` and `/reset/test` sanity test passed
+- [ ] Firebase authorized domain includes your Netlify hostname
+- [ ] Render `FIREBASE_SERVICE_ACCOUNT_JSON` + `CLIENT_URL` updated

@@ -1,8 +1,11 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { filterFaqs, getAllFaqs } from "./data/faqContent";
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+test("FAQ content is populated", () => {
+  expect(getAllFaqs().length).toBeGreaterThan(20);
+});
+
+test("FAQ search finds housing topics", () => {
+  const results = filterFaqs("housing");
+  const total = results.reduce((n, c) => n + c.items.length, 0);
+  expect(total).toBeGreaterThan(0);
 });

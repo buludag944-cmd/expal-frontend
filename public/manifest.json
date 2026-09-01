@@ -1,7 +1,13 @@
 {
-  "short_name": "EXPal",
-  "name": "EXPal",
+  "short_name": "Expal",
+  "name": "Expal — Your friend away from home",
   "icons": [
+    {
+      "src": "expal-logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
     {
       "src": "expal-logo.png",
       "type": "image/png",
@@ -21,6 +27,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#0f172a",
-  "background_color": "#0f172a"
+  "theme_color": "#F25C54",
+  "background_color": "#FDF8F7"
 }

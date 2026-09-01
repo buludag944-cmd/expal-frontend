@@ -1,12 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles/globals.css';
-import { applyTheme, getInitialTheme } from './components/ThemeToggle';
+import { applyTheme, getStoredThemePreference, initThemeLifecycle } from './components/ThemeToggle';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { initCapacitorNative } from './native/capacitorInit';
 
-applyTheme(getInitialTheme());
+applyTheme(getStoredThemePreference());
+initThemeLifecycle();
 initCapacitorNative();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

@@ -4,19 +4,25 @@ import {
   Routes,
   Route,
   Link,
+  Navigate,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
-import VerifyEmail from "./pages/VerifyEmail";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import ResendVerification from "./components/ResendVerification";
 import AppShell from "./components/AppShell";
-import AppLogo from "./components/AppLogo";
+import AuthEntry from "./pages/auth/AuthEntry";
 import Home from "./pages/Home";
+import Onboarding from "./pages/Onboarding";
+import Journey from "./pages/Journey";
+import Community from "./pages/Community";
+import ForumThreadPage from "./pages/ForumThreadPage";
+import Explore from "./pages/Explore";
 import { AuthProvider, useAuth } from "./AuthContext";
 import Messages from "./pages/Messages";
 import ExpatEssentials from "./pages/ExpatEssentials";
 import LocalKnowHow from "./pages/LocalKnowHow";
+import Privacy from "./pages/Privacy";
+import ChildSafetyStandards from "./pages/ChildSafetyStandards";
+import EmploymentSupport from "./pages/EmploymentSupport";
 import Referrals from "./pages/Referrals";
 import CommentsSection from "./components/CommentsSection";
 import Button from "./components/ui/Button";
@@ -27,126 +33,192 @@ import Avatar from "./components/ui/Avatar";
 import { Calendar, House as HouseIcon } from "lucide-react";
 import AdminPanel from "./components/AdminPanel";
 import { getApiBaseUrl } from "./apiConfig";
+import { fetchVisaTypes, updateVisaType, updateEmploymentStatus } from "./lib/journeyApi";
+import { isNativeApp } from "./lib/platform";
+import { HOUSING_FILTERS, filterHousingListings, housingListingTags } from "./lib/housingFilters";
+import MobileHousing from "./pages/mobile/MobileHousing";
+import MobileProfile from "./pages/mobile/MobileProfile";
+import MobileMembers from "./pages/mobile/MobileMembers";
+import MemberProfile from "./pages/MemberProfile";
+import Notifications from "./pages/Notifications";
+import HelpFaq from "./pages/HelpFaq";
+import SearchPage from "./pages/SearchPage";
 
 const API = getApiBaseUrl();
 
 /* ---------- Pages ---------- */
 
-function AuthForm() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
-  const [error, setError] = useState("");
-  const [registerNotice, setRegisterNotice] = useState("");
-  const [submitBusy, setSubmitBusy] = useState(false);
-  const { login, register } = useAuth();
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setRegisterNotice("");
-    setSubmitBusy(true);
-    let result;
-    try {
-      result = isLogin
-        ? await login(form.email, form.password)
-        : await register(form.firstName, form.lastName, form.email, form.password);
-    } finally {
-      setSubmitBusy(false);
-    }
+function ProfileEmploymentSection() {
+  const { user, token, refreshUser } = useAuth();
+  const [status, setStatus] = useState(user?.employmentStatus || "employed");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
 
-    if (!result.success) {
-      setError(result.error);
-      return;
-    }
-    if (result.requiresVerification) {
-      setRegisterNotice(result.message || "Check your email to verify your account.");
-      setIsLogin(true);
+  useEffect(() => {
+    setStatus(user?.employmentStatus || "employed");
+  }, [user?.employmentStatus]);
+
+  const options = [
+    { value: "employed", label: "Employed" },
+    { value: "job_seeking", label: "Looking for work" },
+    { value: "unemployed", label: "Unemployed" },
+    { value: "laid_off", label: "Redundant / laid off" },
+  ];
+
+  const save = async () => {
+    if (!token) return;
+    setBusy(true);
+    setMsg("");
+    try {
+      const res = await fetch(`${API}/api/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ employmentStatus: status }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `Could not save (${res.status})`);
+      }
+      await refreshUser();
+      try {
+        await updateEmploymentStatus(token, status);
+      } catch {
+        /* journey sync optional if API not deployed yet */
+      }
+      setMsg("Employment status saved. Check Journey for updated guidance.");
+    } catch (e) {
+      setMsg(e.message || "Could not save");
+    } finally {
+      setBusy(false);
     }
   };
+
+  if (!user?.onboardingComplete) return null;
+
   return (
-    <Card className="mx-auto max-w-md">
-      <CardContent className="space-y-4 pt-6">
-        <div className="flex justify-center">
-          <AppLogo size={72} />
-        </div>
-        <h2 className="page-title text-center">{isLogin ? "Login" : "Sign Up"}</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <>
-              <Input
-                placeholder="First name"
-                value={form.firstName}
-                onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                required
-              />
-              <Input
-                placeholder="Last name"
-                value={form.lastName}
-                onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                required
-              />
-            </>
-          )}
-          <Input
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-          {isLogin && (
-            <p className="text-right text-sm">
-              <Link
-                to="/forgot"
-                className="font-medium text-primary underline-offset-2 hover:underline min-h-[44px] inline-flex items-center"
-              >
-                Forgot your password?
-              </Link>
-            </p>
-          )}
-          {error && (
-            <div className="space-y-2">
-              <Badge variant="danger">{error}</Badge>
-              {isLogin && error === "Please verify your email first." && (
-                <ResendVerification initialEmail={form.email} inline />
-              )}
-            </div>
-          )}
-          {registerNotice && <Badge variant="success">{registerNotice}</Badge>}
-          {!isLogin && submitBusy && (
-            <p className="text-sm text-muted">Checking backend and submitting…</p>
-          )}
-          <Button type="submit" className="w-full" loading={submitBusy} disabled={submitBusy}>
-            {isLogin ? "Login" : "Sign Up"}
-          </Button>
-        </form>
-        <p className="text-center text-sm text-muted">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setRegisterNotice("");
-              setError("");
-            }}
-            className="font-medium text-primary underline-offset-2 hover:underline min-h-[44px] inline-flex items-center"
-          >
-            {isLogin ? "Sign Up" : "Login"}
-          </button>
+    <Card className="mt-6">
+      <CardContent className="pt-4 space-y-3">
+        <h3 className="font-semibold">Employment status</h3>
+        <p className="text-sm text-muted">
+          Tell us if you&apos;re unemployed or were made redundant so we can show clearer permit and career guidance.
         </p>
+        {user.employmentStatus && (
+          <p className="text-sm">
+            Saved: <strong>{options.find((o) => o.value === user.employmentStatus)?.label || user.employmentStatus}</strong>
+          </p>
+        )}
+        <div className="space-y-2">
+          {options.map(({ value, label }) => (
+            <label key={value} className="flex items-center gap-2 text-sm cursor-pointer min-h-[44px]">
+              <input
+                type="radio"
+                name="employmentStatus"
+                checked={status === value}
+                onChange={() => setStatus(value)}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          onClick={save}
+          loading={busy}
+          disabled={busy || status === (user?.employmentStatus || "employed")}
+        >
+          Save employment status
+        </Button>
+        {msg && (
+          <p className={`text-xs ${msg.includes("saved") || msg.includes("Saved") ? "text-green-700" : "text-red-600"}`}>
+            {msg}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProfileVisaSection() {
+  const { user, token, refreshUser } = useAuth();
+  const [options, setOptions] = useState([]);
+  const [selected, setSelected] = useState(user?.visaType || "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    setSelected(user?.visaType || "");
+  }, [user?.visaType]);
+
+  useEffect(() => {
+    const country = user?.destinationCountry || "Ireland";
+    fetchVisaTypes(country, token).then(setOptions).catch(() => setOptions([]));
+  }, [user?.destinationCountry, token]);
+
+  const save = async () => {
+    if (!token || !selected) return;
+    setBusy(true);
+    setMsg("");
+    try {
+      await updateVisaType(token, selected);
+      await refreshUser();
+      setMsg("Visa type updated — check Journey → Visa guide for your new path.");
+    } catch (e) {
+      setMsg(e.message || "Could not update visa type");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!user?.onboardingComplete) return null;
+
+  return (
+    <Card className="mt-6">
+      <CardContent className="pt-4 space-y-3">
+        <h3 className="font-semibold">Visa &amp; relocation</h3>
+        <p className="text-sm text-muted">
+          Your personalised guide and timeline are based on this pathway. Change it if you switch permit type.
+        </p>
+        {user.visaType && (
+          <p className="text-sm">
+            Current: <strong>{user.visaType}</strong>
+          </p>
+        )}
+        <div className="space-y-2">
+          {options.map((v) => (
+            <label key={v.value} className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="profileVisa"
+                checked={selected === v.value}
+                onChange={() => setSelected(v.value)}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium">{v.label || v.value}</span>
+                {v.tagline && <span className="block text-muted text-xs mt-0.5">{v.tagline}</span>}
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={save} loading={busy} disabled={busy || !selected || selected === user?.visaType}>
+            Update visa type
+          </Button>
+          <Link to="/journey">
+            <Button size="sm" variant="secondary">Open visa guide</Button>
+          </Link>
+        </div>
+        {msg && <p className="text-xs text-muted">{msg}</p>}
       </CardContent>
     </Card>
   );
 }
 
 function Profile() {
-  const { user, token } = useAuth();
+  const { user, token, refreshUser, logout } = useAuth();
   const [form, setForm] = useState({
     nationality: user?.nationality || "",
     currentCity: user?.currentCity || "",
@@ -219,6 +291,7 @@ function Profile() {
 
       const result = await response.json();
       console.log("Profile updated:", result);
+      await refreshUser();
       setMessage("✅ Profile updated successfully!");
       setIsEditing(false);
       setTimeout(() => setMessage(""), 3000);
@@ -239,6 +312,10 @@ function Profile() {
       interests: form.interests.filter((_, i) => i !== index),
     });
   };
+  if (isNativeApp()) {
+    return <MobileProfile />;
+  }
+
   return (
     <div className="space-y-6 max-w-prose">
       {user?.isAdmin && token && <AdminPanel token={token} />}
@@ -317,6 +394,31 @@ function Profile() {
               {message}
             </p>
           )}
+          <ProfileEmploymentSection />
+          <ProfileVisaSection />
+
+          <div className="border-t border-border pt-6 mt-8 space-y-4">
+            <div className="flex flex-wrap gap-3 text-sm">
+              <Link to="/help" className="text-primary font-medium hover:underline">
+                Help &amp; FAQs
+              </Link>
+              <Link to="/privacy" className="text-primary font-medium hover:underline">
+                Privacy
+              </Link>
+              <Link to="/employment-support" className="text-primary font-medium hover:underline">
+                Employment rights
+              </Link>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                if (window.confirm("Sign out of EXPal?")) logout();
+              }}
+            >
+              Sign out
+            </Button>
+          </div>
         </div>
       ) : (
         <div>
@@ -497,157 +599,19 @@ function Profile() {
 }
 
 function SearchProfiles() {
-  const [profiles, setProfiles] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const { token, user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!token) {
-      setProfiles([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await fetch(`${API}/api/users/profiles`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        /* 401 returns { error } — never treat that as profile list or profiles.filter crashes */
-        if (res.status === 401) {
-          logout();
-          setProfiles([]);
-          return;
-        }
-        if (!res.ok) {
-          setProfiles([]);
-          return;
-        }
-        setProfiles(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (!cancelled) console.error(e);
-        if (!cancelled) setProfiles([]);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token, logout]);
-  const filteredProfiles = profiles.filter(
-    (profile) =>
-      `${profile.firstName || ""} ${profile.lastName || ""}`
-        .trim()
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      profile.nationality?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      profile.currentCity?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      profile.industry?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  /* Moved message composer to dedicated /messages page — open thread for this member */
-  function goToMessagesWith(profileMember) {
-    const displayName =
-      `${profileMember.firstName || ""} ${profileMember.lastName || ""}`.trim() || "Member";
-    navigate(`/messages?user=${profileMember.id}`, {
-      state: { openChatWith: { id: profileMember.id, displayName } },
-    });
-  }
-
-  return (
-    <div className="space-y-6">
-      <h2 className="page-title">🔎 Search Expat Profiles</h2>
-      <input
-        className="form-input"
-        placeholder="Search by name, nationality, city, or industry..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        style={{ marginBottom: "1rem" }}
-      />
-      <div style={{ display: "grid", gap: "1rem" }}>
-        {filteredProfiles.map((profile) => (
-          <div
-            key={profile.id}
-            className="item-card"
-            style={{ display: "flex", gap: "1rem" }}
-          >
-            {profile.profileImage && (
-              <img
-                src={profile.profileImage}
-                alt={`${profile.firstName || ""} ${profile.lastName || ""}`.trim()}
-                style={{
-                  width: "60px",
-                  height: "60px",
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
-              />
-            )}
-            <div style={{ flex: 1 }}>
-              <strong>
-                {`${profile.firstName || ""} ${profile.lastName || ""}`.trim()}
-              </strong>
-              {profile.nationality && <span> 🏴 {profile.nationality}</span>}
-              {profile.currentCity && <span> 📍 {profile.currentCity}</span>}
-              <br />
-              {profile.industry && <small>💼 {profile.industry}</small>}
-              {profile.company && <small> at {profile.company}</small>}
-              {profile.bio && (
-                <p style={{ margin: "0.5rem 0", fontSize: "0.9rem", color: "#666" }}>
-                  {profile.bio}
-                </p>
-              )}
-              {profile.interests && profile.interests.length > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "0.25rem",
-                    flexWrap: "wrap",
-                    marginTop: "0.5rem",
-                  }}
-                >
-                  {profile.interests.map((interest, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        background: "#e0f2fe",
-                        color: "#0369a1",
-                        padding: "0.1rem 0.4rem",
-                        borderRadius: "3px",
-                        fontSize: "0.7rem",
-                      }}
-                    >
-                      {interest}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {user && profile.id !== user.id ? (
-                <div style={{ marginTop: "0.5rem" }}>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ fontSize: "0.9rem", padding: "0.5rem 1rem" }}
-                    onClick={() => goToMessagesWith(profile)}
-                  >
-                    💬 Message
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <SearchPage backTo={isNativeApp() ? "/" : "/community"} />;
 }
 
 function Users() {
+  if (isNativeApp()) {
+    return <MobileMembers backTo="/community" />;
+  }
+  return <UsersWeb />;
+}
+
+function UsersWeb() {
   const [users, setUsers] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch(`${API}/api/users`)
@@ -659,21 +623,29 @@ function Users() {
   return (
     <div className="space-y-6">
       <h2 className="page-title">Expat community nearby</h2>
+      <p className="text-sm text-muted">Tap a member to view their profile and send a message.</p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {users.map((u) => (
-          <Card key={u.id}>
-            <CardContent className="flex items-center gap-3 py-4">
-              <Avatar name={`${u.firstName || ""} ${u.lastName || ""}`} />
-              <div>
-                <p className="font-semibold">
-                  {`${u.firstName || ""} ${u.lastName || ""}`.trim() || "Unknown"}
-                </p>
-                <p className="text-sm text-muted">
-                  {u.nationality} {u.city ? `· ${u.city}` : ""}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <button
+            key={u.id}
+            type="button"
+            onClick={() => navigate(`/members/${u.id}`)}
+            className="text-left min-h-[44px]"
+          >
+            <Card className="hover:border-primary/40 transition-colors">
+              <CardContent className="flex items-center gap-3 py-4">
+                <Avatar name={`${u.firstName || ""} ${u.lastName || ""}`} />
+                <div>
+                  <p className="font-semibold">
+                    {`${u.firstName || ""} ${u.lastName || ""}`.trim() || "Unknown"}
+                  </p>
+                  <p className="text-sm text-muted">
+                    {u.nationality} {u.city ? `· ${u.city}` : ""}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </button>
         ))}
       </div>
     </div>
@@ -682,6 +654,7 @@ function Users() {
 
 function Housing() {
   const { token, user } = useAuth();
+  const native = isNativeApp();
   const [homes, setHomes] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -692,6 +665,8 @@ function Housing() {
     description: "",
     images: [],
   });
+  const [housingFilter, setHousingFilter] = useState("All");
+  const [housingSearch, setHousingSearch] = useState("");
 
   // Fetch existing listings
   useEffect(() => {
@@ -724,12 +699,10 @@ function Housing() {
     const url = isEditing ? `${API}/api/housing/${editingId}` : `${API}/api/housing`;
     fetch(url, {
       method: isEditing ? "PUT" : "POST",
-      headers: isEditing
-        ? { "Content-Type": "application/json" }
-        : {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify(form),
     })
       .then((res) => res.json())
@@ -761,18 +734,53 @@ function Housing() {
   };
 
   const handleDeleteHousing = (id) => {
-    fetch(`${API}/api/housing/${id}`, { method: "DELETE" })
+    if (!window.confirm("Delete this housing listing permanently?")) return;
+    fetch(`${API}/api/housing/${id}`, {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to delete housing ${id}`);
       })
       .then(() => setHomes((prev) => prev.filter((item) => item.id !== id)))
       .catch(console.error);
     if (editingId === id) {
-      setEditingId(null);
-      setShowForm(false);
-      setForm({ title: "", city: "", price: "", description: "", images: [] });
+      resetHousingForm();
     }
   };
+
+  const resetHousingForm = () => {
+    setForm({ title: "", city: "", price: "", description: "", images: [] });
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const cityLabel = user?.destinationCity || "Dublin";
+  const filteredHomes = filterHousingListings(homes, {
+    filter: housingFilter,
+    search: housingSearch,
+  });
+
+  if (native) {
+    return (
+      <MobileHousing
+        homes={homes}
+        cityLabel={cityLabel}
+        user={user}
+        token={token}
+        showForm={showForm}
+        setShowForm={setShowForm}
+        form={form}
+        setForm={setForm}
+        handleSubmit={handleSubmit}
+        handleImageUpload={handleImageUpload}
+        handleEditHousing={handleEditHousing}
+        handleDeleteHousing={handleDeleteHousing}
+        editingId={editingId}
+        resetForm={resetHousingForm}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -837,8 +845,38 @@ function Housing() {
         </Card>
       )}
 
+      <div className="space-y-3">
+        <Input
+          value={housingSearch}
+          onChange={(e) => setHousingSearch(e.target.value)}
+          placeholder="Search area, type, price…"
+          aria-label="Search housing listings"
+        />
+        <div className="flex flex-wrap gap-2">
+          {HOUSING_FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setHousingFilter(f)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 999,
+                border: "1px solid var(--border)",
+                background: housingFilter === f ? "var(--primary)" : "var(--card)",
+                color: housingFilter === f ? "#fff" : "inherit",
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-muted">{filteredHomes.length} listings found</p>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {homes.map((h) => {
+        {filteredHomes.map((h) => {
           const author = h.User
             ? `${h.User.firstName || ""} ${h.User.lastName || ""}`.trim() || "Unknown"
             : "Unknown";
@@ -850,7 +888,11 @@ function Housing() {
               <CardContent className="flex flex-1 flex-col gap-3 space-y-0 pt-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <Badge variant="info">{h.city}</Badge>
+                    <div className="flex flex-wrap gap-1.5">
+                      {housingListingTags(h).slice(0, 3).map((tag) => (
+                        <Badge key={tag} variant="info">{tag}</Badge>
+                      ))}
+                    </div>
                     <h3 className="mt-2 text-lg font-semibold">{h.title}</h3>
                     <p className="text-sm font-medium text-primary">€{h.price}/mo</p>
                   </div>
@@ -864,28 +906,45 @@ function Housing() {
                 {h.description && <p className="text-sm text-muted line-clamp-3">{h.description}</p>}
                 <p className="text-xs text-muted">Posted by {author}</p>
                 <div className="mt-auto border-t border-border pt-4">
-                  <CommentsSection targetType="listing" targetId={h.id} apiBase={API} user={user} />
+                  <CommentsSection targetType="listing" targetId={h.id} apiBase={API} user={user} token={token} />
                 </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      {filteredHomes.length === 0 && (
+        <p className="text-sm text-muted">No listings match your search — try another filter or post a new listing.</p>
+      )}
     </div>
   );
 }
 
 
 function Events() {
-  const { user } = useAuth();
+  if (isNativeApp()) {
+    return <Navigate to="/community?tab=Events" replace />;
+  }
+  return <EventsWebPage />;
+}
+
+function EventsWebPage() {
+  const { user, token } = useAuth();
   const [events, setEvents] = useState([]);
   const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
     date: "",
     location: "",
   });
+
+  const authHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
 
   const loadEvents = () => {
     setError("");
@@ -905,31 +964,36 @@ function Events() {
     loadEvents();
   }, []);
 
+  const resetForm = () => {
+    setForm({ title: "", description: "", date: "", location: "" });
+    setEditingId(null);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
-    if (!user?.id) {
+    if (!user?.id || !token) {
       setError("You must be logged in to post an event.");
       return;
     }
-    fetch(`${API}/api/events`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const isEditing = editingId !== null;
+    fetch(isEditing ? `${API}/api/events/${editingId}` : `${API}/api/events`, {
+      method: isEditing ? "PUT" : "POST",
+      headers: authHeaders,
       body: JSON.stringify({
         title: form.title.trim(),
         description: form.description.trim(),
         date: form.date,
         location: form.location.trim(),
-        createdBy: user.id,
       }),
     })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `Create failed (${res.status})`);
+        if (!res.ok) throw new Error(data.error || `Save failed (${res.status})`);
         return data;
       })
       .then(() => {
-        setForm({ title: "", description: "", date: "", location: "" });
+        resetForm();
         loadEvents();
       })
       .catch((err) => {
@@ -937,6 +1001,40 @@ function Events() {
         setError(err.message);
       });
   };
+
+  const startEditEvent = (ev) => {
+    setEditingId(ev.id);
+    const d = ev.date ? new Date(ev.date) : new Date();
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+    setForm({
+      title: ev.title || "",
+      description: ev.description || "",
+      date: local,
+      location: ev.location || "",
+    });
+  };
+
+  const handleDeleteEvent = (id) => {
+    if (!window.confirm("Delete this event?")) return;
+    fetch(`${API}/api/events/${id}`, { method: "DELETE", headers: authHeaders })
+      .then((res) => {
+        if (!res.ok && res.status !== 204) {
+          return res.json().then((d) => {
+            throw new Error(d.error || "Delete failed");
+          });
+        }
+      })
+      .then(() => {
+        setEvents((prev) => prev.filter((ev) => ev.id !== id));
+        if (editingId === id) resetForm();
+      })
+      .catch((err) => setError(err.message));
+  };
+
+  const canModifyEvent = (ev) =>
+    user && (Number(ev.createdBy) === Number(user.id) || user.isAdmin);
 
   return (
     <div className="space-y-6">
@@ -950,7 +1048,7 @@ function Events() {
 
       <Card>
         <CardContent className="space-y-4 pt-6">
-          <h3 className="text-lg font-semibold">Add an event</h3>
+          <h3 className="text-lg font-semibold">{editingId ? "Edit event" : "Add an event"}</h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
             <Textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
@@ -959,7 +1057,14 @@ function Events() {
               <Input type="datetime-local" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
             </div>
             <Input placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} required />
-            <Button type="submit">Post event</Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit">{editingId ? "Save changes" : "Post event"}</Button>
+              {editingId !== null && (
+                <Button type="button" variant="secondary" onClick={resetForm}>
+                  Cancel
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -977,8 +1082,18 @@ function Events() {
                 {ev.date ? new Date(ev.date).toLocaleString() : "—"}
               </p>
               {ev.description && <p className="text-sm text-muted line-clamp-3">{ev.description}</p>}
+              {canModifyEvent(ev) && (
+                <div className="flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => startEditEvent(ev)}>
+                    Edit
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => handleDeleteEvent(ev.id)}>
+                    Delete
+                  </Button>
+                </div>
+              )}
               <div className="border-t border-border pt-4">
-                <CommentsSection targetType="event" targetId={ev.id} apiBase={API} user={user} />
+                <CommentsSection targetType="event" targetId={ev.id} apiBase={API} user={user} token={token} />
               </div>
             </CardContent>
           </Card>
@@ -1001,46 +1116,102 @@ export default function App() {
   );
 }
 
+function OnboardingGate({ children }) {
+  const { user, authReady } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!authReady || !user?.onboardingComplete) return;
+    if (location.pathname === "/onboarding") {
+      navigate("/", { replace: true });
+    }
+  }, [user, authReady, location.pathname, navigate]);
+
+  return (
+    <>
+      {user && !user.onboardingComplete && location.pathname !== "/onboarding" && (
+        <div className="onboard-banner">
+          <p>Complete your profile to unlock personalised visa guides and timeline.</p>
+          <button type="button" onClick={() => navigate("/onboarding")}>
+            Resume setup →
+          </button>
+        </div>
+      )}
+      {children}
+    </>
+  );
+}
+
 function MainApp() {
-  const { user } = useAuth();
+  const { user, authReady, authBlocking, clearSession } = useAuth();
+
+  if (!authReady && authBlocking) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-muted text-sm">Loading your account…</p>
+        <p className="text-xs text-muted max-w-sm">
+          The server may be waking up (first load can take a few seconds).
+        </p>
+        <button
+          type="button"
+          className="text-sm font-medium text-primary underline min-h-[44px] px-4"
+          onClick={() => clearSession("")}
+        >
+          Continue to sign in
+        </button>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
       <Router>
-        <AppShell
-          guest
-          guestSubtitle="Connecting expats through community, housing, and events"
-        >
-          <Routes>
-            <Route path="/verify/:token" element={<VerifyEmail />} />
-            <Route path="/forgot" element={<ForgotPassword />} />
-            <Route path="/reset/:token" element={<ResetPassword />} />
-            <Route path="*" element={<AuthForm />} />
-          </Routes>
-        </AppShell>
+        <Routes>
+          <Route path="/verify/:token" element={<Navigate to="/" replace />} />
+          <Route path="/forgot" element={<Navigate to="/" replace />} />
+          <Route path="/reset/:token" element={<Navigate to="/" replace />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/child-safety" element={<ChildSafetyStandards />} />
+          <Route path="/employment-support" element={<EmploymentSupport />} />
+          <Route path="*" element={<AuthEntry />} />
+        </Routes>
       </Router>
     );
   }
   return (
     <Router>
       <AppShell>
-        <Routes>
-          <Route path="/verify/:token" element={<VerifyEmail />} />
-          <Route path="/forgot" element={<ForgotPassword />} />
-          <Route path="/reset/:token" element={<ResetPassword />} />
-          <Route path="/" element={<Home />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/housing" element={<Housing />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/essentials/:id" element={<ExpatEssentials />} />
-          <Route path="/essentials" element={<ExpatEssentials />} />
-          <Route path="/knowhow/:id" element={<LocalKnowHow />} />
-          <Route path="/knowhow" element={<LocalKnowHow />} />
-          <Route path="/referrals" element={<Referrals />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/search" element={<SearchProfiles />} />
-          <Route path="/profile" element={<Profile />} />
-        </Routes>
+        <OnboardingGate>
+          <Routes>
+            <Route path="/verify/:token" element={<Navigate to="/" replace />} />
+            <Route path="/forgot" element={<Navigate to="/" replace />} />
+            <Route path="/reset/:token" element={<Navigate to="/" replace />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/child-safety" element={<ChildSafetyStandards />} />
+            <Route path="/employment-support" element={<EmploymentSupport />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/explore" element={<Explore />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/community/thread/:threadId" element={<ForumThreadPage />} />
+            <Route path="/journey" element={<Journey />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/members/:userId" element={<MemberProfile />} />
+            <Route path="/housing" element={<Housing />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/essentials/:id" element={<ExpatEssentials />} />
+            <Route path="/essentials" element={<ExpatEssentials />} />
+            <Route path="/knowhow/:id" element={<LocalKnowHow />} />
+            <Route path="/knowhow" element={<LocalKnowHow />} />
+            <Route path="/referrals" element={<Referrals />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/help" element={<HelpFaq />} />
+            <Route path="/search" element={<SearchProfiles />} />
+            <Route path="/profile" element={<Profile />} />
+          </Routes>
+        </OnboardingGate>
       </AppShell>
     </Router>
   );

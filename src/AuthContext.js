@@ -1,72 +1,44 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { getApiBaseUrl } from "./apiConfig";
-import { setupPushNotifications } from "./lib/pushNotifications";
+import { syncPushTokenIfGranted, unregisterPushDevice } from "./lib/pushNotifications";
 
 const AuthContext = createContext();
 const API = getApiBaseUrl();
+const TOKEN_KEY = "token";
+const USER_KEY = "expal_user";
+const PROFILE_TIMEOUT_MS = 12000;
+const AUTH_BLOCK_MAX_MS = 6000;
 
-const NETWORK_ERROR =
-  "Cannot reach API. Start the backend: cd backend && npm start (port 3001).";
+function readStoredUser() {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
-const BACKEND_UNREACHABLE_LOCAL =
-  "Backend not reachable — is the server running on port 3001? Check REACT_APP_API_URL in frontend/.env and restart `npm start`.";
-
-const BACKEND_UNREACHABLE_REMOTE =
-  "API not reachable. On Render free tier the server may be asleep — wait up to 60 seconds and try again. If it keeps failing, check https://expalapp-1.onrender.com/health in your browser.";
-
-const HEALTH_TIMEOUT_MS = 3500;
-const HEALTH_RETRIES = 2;
-const HEALTH_RETRY_DELAY_MS = 300;
-const REMOTE_HEALTH_TIMEOUT_MS = 25000;
-const REMOTE_HEALTH_RETRIES = 5;
-const REMOTE_HEALTH_RETRY_DELAY_MS = 800;
+function writeStoredUser(user) {
+  if (user && user.id) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(USER_KEY);
+  }
+}
 
 function isLocalApiBase(apiBase) {
   return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(apiBase.replace(/\/$/, ""));
 }
 
-async function checkApiHealth(apiBase) {
-  const root = apiBase.replace(/\/$/, "");
-  const url = `${root}/health`;
-  const local = isLocalApiBase(root);
-  const timeoutMs = local ? HEALTH_TIMEOUT_MS : REMOTE_HEALTH_TIMEOUT_MS;
-  const retries = local ? HEALTH_RETRIES : REMOTE_HEALTH_RETRIES;
-  const retryDelayMs = local ? HEALTH_RETRY_DELAY_MS : REMOTE_HEALTH_RETRY_DELAY_MS;
-  let lastDetail = "";
+const BACKEND_UNREACHABLE_LOCAL =
+  "Backend not reachable — is the server running on port 3001? Check REACT_APP_API_URL in frontend/.env and restart `npm start`.";
 
-  for (let attempt = 1; attempt <= retries; attempt += 1) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timer);
-      if (!res.ok) {
-        lastDetail = `HTTP ${res.status}`;
-      } else {
-        const text = await res.text();
-        if (text.includes('"ok":true') || text.trim() === "OK") {
-          return { ok: true, detail: "" };
-        }
-        try {
-          const data = JSON.parse(text);
-          if (data && data.ok === true) {
-            return { ok: true, detail: "" };
-          }
-        } catch {
-          /* not JSON */
-        }
-        lastDetail = "Unexpected /health body (expected { ok: true })";
-      }
-    } catch (e) {
-      lastDetail = e && e.name === "AbortError" ? "timeout" : e && e.message ? e.message : "network error";
-    }
-    if (attempt < retries) {
-      await new Promise((r) => setTimeout(r, retryDelayMs));
-    }
-  }
+const BACKEND_UNREACHABLE_REMOTE = (apiBase) =>
+  `API not reachable. On Render free tier the server may be asleep — wait up to 60 seconds and try again. If it keeps failing, check ${apiBase.replace(/\/$/, "")}/health in your browser.`;
 
-  return { ok: false, detail: lastDetail };
-}
+const NETWORK_ERROR = isLocalApiBase(API)
+  ? BACKEND_UNREACHABLE_LOCAL
+  : BACKEND_UNREACHABLE_REMOTE(API);
 
 async function parseJsonSafe(res) {
   try {
@@ -76,48 +48,227 @@ async function parseJsonSafe(res) {
   }
 }
 
+async function fetchProfileFromApi(accessToken) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROFILE_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API}/api/profile`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: controller.signal,
+    });
+    const data = await parseJsonSafe(res);
+    return { res, data };
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      return { res: { ok: false, status: 408 }, data: { error: "timeout" } };
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [user, setUser] = useState(() => readStoredUser());
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const [authNotice, setAuthNotice] = useState("");
+  const [authReady, setAuthReady] = useState(true);
+  const [authBlocking, setAuthBlocking] = useState(false);
+  const freshSessionRef = useRef(false);
 
-  const logout = useCallback(() => {
+  const clearSession = useCallback((notice = "") => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem("token");
+    setAuthNotice(notice);
+    setAuthReady(true);
+    setAuthBlocking(false);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }, []);
+
+  const logout = useCallback(() => {
+    const prevToken = localStorage.getItem(TOKEN_KEY);
+    // Best-effort: drop FCM registration so the next account doesn't get this device's pushes
+    unregisterPushDevice(prevToken).catch(() => {});
+    clearSession("");
+  }, [clearSession]);
+
+  const applySession = useCallback(async (accessToken, loginUser) => {
+    if (!accessToken || !loginUser?.id) {
+      return null;
+    }
+
+    freshSessionRef.current = true;
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    writeStoredUser(loginUser);
+    setUser(loginUser);
+    setAuthNotice("");
+    setAuthReady(true);
+    setAuthBlocking(false);
+    setToken(accessToken);
+
+    try {
+      const { res, data } = await fetchProfileFromApi(accessToken);
+      if (res.ok && data?.id) {
+        setUser(data);
+        writeStoredUser(data);
+      }
+    } catch {
+      /* keep loginUser from auth response */
+    } finally {
+      freshSessionRef.current = false;
+    }
+
+    return loginUser;
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setAuthReady(true);
+      setAuthBlocking(false);
+      return;
+    }
+
+    if (freshSessionRef.current) {
+      return;
+    }
 
     let cancelled = false;
-    fetch(`${API}/api/profile`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => parseJsonSafe(res))
-      .then((data) => {
-        if (cancelled) return;
-        if (data && data.error) {
-          logout();
-        } else if (data && data.id) {
+    const cachedUser = readStoredUser();
+    const shouldBlock = !cachedUser?.id;
+
+    if (shouldBlock) {
+      setAuthBlocking(true);
+      setAuthReady(false);
+    } else {
+      setAuthReady(true);
+      setAuthBlocking(false);
+    }
+
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        setAuthReady(true);
+        setAuthBlocking(false);
+      }
+    }, shouldBlock ? AUTH_BLOCK_MAX_MS : PROFILE_TIMEOUT_MS);
+
+    fetchProfileFromApi(token)
+      .then(({ res, data }) => {
+        if (cancelled || freshSessionRef.current) return;
+        if (res.ok && data?.id) {
           setUser(data);
+          writeStoredUser(data);
+          setAuthNotice("");
+          return;
+        }
+        if (res.status === 401) {
+          clearSession(
+            "Your session expired. Sign in with Google again — your data is saved on the server if you use the same Google account."
+          );
         }
       })
       .catch(() => {
-        if (!cancelled) console.warn("Profile verify skipped: API unreachable.");
+        /* keep cached user — app stays usable */
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        if (!cancelled) {
+          setAuthReady(true);
+          setAuthBlocking(false);
+        }
       });
 
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
     };
-  }, [token, logout]);
+  }, [token, clearSession]);
 
   useEffect(() => {
     if (token && user) {
-      setupPushNotifications(token);
+      syncPushTokenIfGranted(token);
     }
   }, [token, user]);
+
+  const loginWithGoogle = async (idToken) => {
+    const url = `${API}/api/auth/google`;
+    const unreachable = isLocalApiBase(API)
+      ? BACKEND_UNREACHABLE_LOCAL
+      : BACKEND_UNREACHABLE_REMOTE(API);
+
+    const postOnce = async () => {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      const data = await parseJsonSafe(res);
+      return { res, data };
+    };
+
+    try {
+      // Warm Render free tier before / after a failed attempt
+      if (!isLocalApiBase(API)) {
+        await fetch(`${API}/health`).catch(() => {});
+      }
+
+      let { res, data } = await postOnce();
+
+      // Retry once if server was cold-starting
+      if (!res.ok && (res.status >= 500 || res.status === 502 || res.status === 503 || res.status === 504)) {
+        await new Promise((r) => setTimeout(r, 2500));
+        ({ res, data } = await postOnce());
+      }
+
+      if (data.token && data.user?.id) {
+        await applySession(data.token, data.user);
+        return { success: true };
+      }
+      if (data.token && !data.user?.id) {
+        return {
+          success: false,
+          error: "Sign-in succeeded but profile was incomplete. Try again in a moment.",
+        };
+      }
+      if (res.status === 404) {
+        return {
+          success: false,
+          error:
+            "Server update required: API missing POST /api/auth/google. Redeploy the backend on Render.",
+        };
+      }
+      if (res.status === 503) {
+        return {
+          success: false,
+          error:
+            data.error ||
+            "Google sign-in is not configured on the server. Add FIREBASE_SERVICE_ACCOUNT_JSON on Render and redeploy.",
+        };
+      }
+      return {
+        success: false,
+        error: data.error || `Google sign-in failed (${res.status})`,
+      };
+    } catch {
+      // One delayed retry for transient network / cold start
+      try {
+        await new Promise((r) => setTimeout(r, 2000));
+        const { res, data } = await postOnce();
+        if (data.token && data.user?.id) {
+          await applySession(data.token, data.user);
+          return { success: true };
+        }
+        return {
+          success: false,
+          error: data.error || `Google sign-in failed (${res.status})`,
+        };
+      } catch {
+        return { success: false, error: unreachable };
+      }
+    }
+  };
 
   const login = async (email, password) => {
     try {
@@ -128,10 +279,8 @@ export const AuthProvider = ({ children }) => {
       });
       const data = await parseJsonSafe(res);
 
-      if (data.token) {
-        setToken(data.token);
-        setUser(data.user);
-        localStorage.setItem("token", data.token);
+      if (data.token && data.user?.id) {
+        await applySession(data.token, data.user);
         return { success: true };
       }
       return { success: false, error: data.error || `Login failed (${res.status})` };
@@ -141,10 +290,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (firstName, lastName, email, password) => {
-    console.info("[signup] API base:", API, "(from REACT_APP_API_URL / default)");
-
     try {
-      console.info("[signup] POST /api/register →", `${API}/api/register`);
       const controller = new AbortController();
       const registerTimeoutMs = isLocalApiBase(API) ? 15000 : 90000;
       const timer = setTimeout(() => controller.abort(), registerTimeoutMs);
@@ -172,10 +318,8 @@ export const AuthProvider = ({ children }) => {
           message: data.message || "Check your email to verify your account.",
         };
       }
-      if (data.token && data.user) {
-        setToken(data.token);
-        setUser(data.user);
-        localStorage.setItem("token", data.token);
+      if (data.token && data.user?.id) {
+        await applySession(data.token, data.user);
         return { success: true };
       }
       if (data.id) {
@@ -194,8 +338,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = useCallback(async () => {
+    if (!token) return null;
+    const { res, data } = await fetchProfileFromApi(token);
+    if (res.ok && data?.id) {
+      setUser(data);
+      writeStoredUser(data);
+      return data;
+    }
+    return null;
+  }, [token]);
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        authReady,
+        authBlocking,
+        login,
+        loginWithGoogle,
+        register,
+        logout,
+        authNotice,
+        refreshUser,
+        clearSession,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

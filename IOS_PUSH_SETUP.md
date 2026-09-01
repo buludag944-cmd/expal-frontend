@@ -62,6 +62,23 @@ Xcode may change `aps-environment` in `App.entitlements` to `production` when yo
 
 In Xcode left sidebar: **App** → **GoogleService-Info.plist** must be visible (not red/missing).
 
+### 5. Firebase iOS SDK (Swift Package) — **skip the manual step**
+
+Firebase’s docs say **File → Add Packages** and add `https://github.com/firebase/firebase-ios-sdk` with **FirebaseAnalytics**.
+
+**You do not need that for EXPal.** This project uses **`@capacitor-firebase/messaging`**, which already pulls in the Firebase iOS SDK through **CapApp-SPM** (`ios/App/CapApp-SPM/Package.swift`):
+
+| Already included via Capacitor | Purpose |
+|------------------------------|---------|
+| **FirebaseCore** | Reads `GoogleService-Info.plist`, runs `FirebaseApp.configure()` |
+| **FirebaseMessaging** | FCM push tokens |
+
+Adding the same SDK again in Xcode can cause **duplicate package** / link errors.
+
+**Only add FirebaseAnalytics** in Xcode if you later want Firebase Analytics in the native app (optional; not required for push).
+
+After `npm run cap:sync`, open Xcode → **File → Packages → Resolve Package Versions** if packages look stuck.
+
 ---
 
 ## Part 3 — Backend (Render)

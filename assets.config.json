@@ -1,8 +1,8 @@
 {
-  "iconBackgroundColor": "#0f172a",
-  "iconBackgroundColorDark": "#0f172a",
-  "splashBackgroundColor": "#0f172a",
-  "splashBackgroundColorDark": "#0f172a",
+  "iconBackgroundColor": "#FDF8F7",
+  "iconBackgroundColorDark": "#FDF8F7",
+  "splashBackgroundColor": "#F25C54",
+  "splashBackgroundColorDark": "#F25C54",
   "android": {
     "icon": {
       "sources": [{ "src": "resources/icon.png" }]

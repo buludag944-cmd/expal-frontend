@@ -3,8 +3,11 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import CommentsSection from "../components/CommentsSection";
+import Button from "../components/ui/Button";
 import { getApiBaseUrl } from "../apiConfig";
 import { cn } from "../lib/cn";
+import { isNativeApp } from "../lib/platform";
+import { MobileContentList, MobileContentDetail, ESSENTIALS_CONFIG } from "./mobile/MobileContentLibrary";
 
 const API = getApiBaseUrl();
 
@@ -34,34 +37,84 @@ function formatDate(iso) {
 
 function EssentialDetail({ id }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [post, setPost] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ title: "", category: "", content: "" });
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(() => {
     setLoading(true);
     setError("");
-    fetch(`${API}/api/essentials/${id}`)
+    return fetch(`${API}/api/essentials/${id}`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || `Load failed (${res.status})`);
         return data;
       })
       .then((data) => {
-        if (!cancelled) setPost(data);
+        setPost(data);
+        setForm({
+          title: data.title || "",
+          category: data.category || "Visa",
+          content: data.content || "",
+        });
       })
-      .catch((e) => {
-        if (!cancelled) setError(e.message || "Could not load guide");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .catch((e) => setError(e.message || "Could not load guide"))
+      .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const isOwner = post && (Number(user?.id) === Number(post.createdBy) || user?.isAdmin);
+
+  const saveGuide = async () => {
+    if (!token) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`${API}/api/essentials/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update guide");
+      setPost(data);
+      setEditing(false);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeGuide = async () => {
+    if (!token || !window.confirm("Delete this guide?")) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`${API}/api/essentials/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok && res.status !== 204) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete guide");
+      }
+      navigate("/essentials", { replace: true });
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -98,9 +151,57 @@ function EssentialDetail({ id }) {
       <p className="text-sm md:text-base text-muted mb-6 md:mb-8">
         By {authorLabel(post)} · {formatDate(post.createdAt)}
       </p>
-      <div className="prose prose-sm max-w-none text-foreground mb-8 md:mb-10">{post.content}</div>
+      {editing ? (
+        <div className="space-y-4 mb-8">
+          <input
+            className="form-input w-full"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+          />
+          <select
+            className="form-input w-full"
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+          >
+            {CATEGORY_TABS.filter((c) => c !== "All").map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <textarea
+            className="form-input form-textarea w-full"
+            rows={8}
+            value={form.content}
+            onChange={(e) => setForm({ ...form, content: e.target.value })}
+          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={saveGuide} loading={busy} disabled={busy}>
+              Save
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setEditing(false)} disabled={busy}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="prose prose-sm max-w-none text-foreground mb-4">{post.content}</div>
+          {isOwner && (
+            <div className="flex gap-2 mb-8">
+              <Button size="sm" variant="secondary" onClick={() => setEditing(true)} disabled={busy}>
+                Edit guide
+              </Button>
+              <Button size="sm" variant="secondary" onClick={removeGuide} disabled={busy}>
+                Delete guide
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+      {error && <p className="form-error-text mb-4">{error}</p>}
       <div className="border-t border-border pt-6 md:pt-8 lborder-es pl-4">
-        <CommentsSection targetType="essential" targetId={post.id} apiBase={API} user={user} />
+        <CommentsSection targetType="essential" targetId={post.id} apiBase={API} user={user} token={token} />
       </div>
     </article>
   );
@@ -292,10 +393,12 @@ function EssentialList() {
 
 export default function ExpatEssentials() {
   const { id } = useParams();
+  const native = isNativeApp();
 
   if (id) {
     const num = Number(id);
     if (!Number.isInteger(num) || num < 1) {
+      if (native) return <MobileContentList config={ESSENTIALS_CONFIG} />;
       return (
         <div className={sectionWrap}>
           <p className="form-error-text">Invalid guide.</p>
@@ -305,8 +408,10 @@ export default function ExpatEssentials() {
         </div>
       );
     }
+    if (native) return <MobileContentDetail config={ESSENTIALS_CONFIG} id={num} />;
     return <EssentialDetail id={num} />;
   }
 
+  if (native) return <MobileContentList config={ESSENTIALS_CONFIG} />;
   return <EssentialList />;
 }

@@ -4,7 +4,9 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.yourbrand.expal",
-      "sha256_cert_fingerprints": ["YOUR_ANDROID_RELEASE_SHA256"]
+      "sha256_cert_fingerprints": [
+        "4D:2C:41:A3:12:16:51:16:60:C6:4F:54:C1:BE:62:C3:83:D0:85:63:7E:A1:A2:19:8E:17:71:C8:AE:B6:7D:E8"
+      ]
     }
   }
 ]

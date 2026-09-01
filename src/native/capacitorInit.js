@@ -13,10 +13,14 @@ export async function initCapacitorNative() {
   ]);
 
   try {
-    await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: "#0f172a" });
+    const isIOS = Capacitor.getPlatform() === "ios";
+    await StatusBar.setOverlaysWebView({ overlay: false });
+    await StatusBar.setStyle({ style: Style.Light });
+    if (!isIOS) {
+      await StatusBar.setBackgroundColor({ color: "#F25C54" });
+    }
   } catch {
-    /* iOS may ignore background color */
+    /* iOS may ignore background / overlay APIs */
   }
 
   App.addListener("backButton", ({ canGoBack }) => {
@@ -32,4 +36,8 @@ export async function initCapacitorNative() {
   } catch {
     /* already hidden */
   }
+
+  window.setTimeout(() => {
+    SplashScreen.hide().catch(() => {});
+  }, 500);
 }

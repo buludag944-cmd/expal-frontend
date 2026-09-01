@@ -20,56 +20,82 @@ async function postTokenToBackend(fcmToken, authToken) {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    console.warn("[push] register failed:", data.error || res.status);
-    return false;
+    const msg = data.error || `Server error (${res.status})`;
+    console.warn("[push] register failed:", msg);
+    return { ok: false, error: msg };
   }
   console.info("[push] device registered with backend");
-  return true;
+  return { ok: true };
 }
 
 function handleNotificationTap(notification) {
   const raw = notification?.data;
   const data =
     raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  if (data.path) {
+    const path = data.path.startsWith("/") ? data.path : `/${data.path}`;
+    window.location.href = path;
+    return;
+  }
   if (data.type === "message" && data.peerId) {
     window.location.href = `/messages?user=${encodeURIComponent(data.peerId)}`;
     return;
   }
-  if (data.type === "comment" && data.path) {
-    window.location.href = data.path.startsWith("/") ? data.path : `/${data.path}`;
+  if (data.type === "forum_thread" && data.threadId) {
+    window.location.href = `/community/thread/${encodeURIComponent(data.threadId)}`;
   }
 }
 
 /**
+ * Attach FCM listeners once (no permission prompt).
+ */
+async function attachPushListeners() {
+  if (!Capacitor.isNativePlatform() || listenersAttached) return;
+  listenersAttached = true;
+
+  await FirebaseMessaging.addListener("tokenReceived", async (event) => {
+    if (event.token && currentAuthToken) {
+      await postTokenToBackend(event.token, currentAuthToken);
+    }
+  });
+
+  await FirebaseMessaging.addListener("notificationReceived", (event) => {
+    console.info("[push] received (foreground):", event.notification?.title);
+  });
+
+  await FirebaseMessaging.addListener("notificationActionPerformed", (event) => {
+    handleNotificationTap(event.notification);
+  });
+}
+
+/**
+ * Re-register FCM token if user already granted permission (no prompt).
+ * Call after login so returning users stay subscribed without a login-time dialog.
+ */
+export async function syncPushTokenIfGranted(authToken) {
+  if (!authToken || !Capacitor.isNativePlatform()) return;
+  currentAuthToken = authToken;
+  await attachPushListeners();
+  const perm = await FirebaseMessaging.checkPermissions();
+  if (perm.receive !== "granted") return;
+  const { token } = await FirebaseMessaging.getToken();
+  if (token) await postTokenToBackend(token, authToken);
+}
+
+/**
  * Register FCM token on native Android/iOS. No-op on web.
- * Uses @capacitor-firebase/messaging so iOS tokens work with Firebase Admin on Render.
+ * Prompts for permission when not yet granted — use from Profile → Enable push alerts.
  */
 export async function setupPushNotifications(authToken) {
-  if (!authToken) return;
+  if (!authToken) return { granted: false, registered: false, reason: "no_auth" };
   currentAuthToken = authToken;
 
   if (!Capacitor.isNativePlatform()) {
     console.info("[push] web browser — use native app for push (see IOS_PUSH_SETUP.md)");
-    return;
+    return { granted: false, registered: false, reason: "web" };
   }
 
-  if (!listenersAttached) {
-    listenersAttached = true;
-
-    await FirebaseMessaging.addListener("tokenReceived", async (event) => {
-      if (event.token && currentAuthToken) {
-        await postTokenToBackend(event.token, currentAuthToken);
-      }
-    });
-
-    await FirebaseMessaging.addListener("notificationReceived", (event) => {
-      console.info("[push] received (foreground):", event.notification?.title);
-    });
-
-    await FirebaseMessaging.addListener("notificationActionPerformed", (event) => {
-      handleNotificationTap(event.notification);
-    });
-  }
+  await attachPushListeners();
 
   let perm = await FirebaseMessaging.checkPermissions();
   if (perm.receive !== "granted") {
@@ -77,24 +103,44 @@ export async function setupPushNotifications(authToken) {
   }
   if (perm.receive !== "granted") {
     console.warn("[push] notification permission denied");
-    return;
+    return { granted: false, registered: false, reason: "denied" };
   }
 
-  const { token } = await FirebaseMessaging.getToken();
-  if (token) {
-    await postTokenToBackend(token, authToken);
+  let token;
+  try {
+    ({ token } = await FirebaseMessaging.getToken());
+  } catch (err) {
+    console.warn("[push] getToken failed:", err?.message || err);
+    return { granted: true, registered: false, reason: "token_failed", detail: err?.message };
   }
+
+  if (!token) {
+    return { granted: true, registered: false, reason: "no_token" };
+  }
+
+  const result = await postTokenToBackend(token, authToken);
+  return {
+    granted: true,
+    registered: result.ok,
+    reason: result.ok ? "ok" : "register_failed",
+    detail: result.error,
+  };
 }
 
 export async function unregisterPushDevice(authToken, fcmToken) {
-  if (!authToken) return;
   currentAuthToken = null;
+  if (!Capacitor.isNativePlatform()) return;
+  let token = fcmToken;
   try {
-    await FirebaseMessaging.deleteToken();
+    if (!token) {
+      const result = await FirebaseMessaging.getToken().catch(() => null);
+      token = result?.token;
+    }
+    await FirebaseMessaging.deleteToken().catch(() => {});
   } catch {
     /* ignore */
   }
-  if (!fcmToken) return;
+  if (!authToken || !token) return;
   const API = getApiBaseUrl();
   await fetch(`${API}/api/push/unregister`, {
     method: "DELETE",
@@ -102,6 +148,6 @@ export async function unregisterPushDevice(authToken, fcmToken) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${authToken}`,
     },
-    body: JSON.stringify({ token: fcmToken }),
+    body: JSON.stringify({ token }),
   }).catch(() => {});
 }

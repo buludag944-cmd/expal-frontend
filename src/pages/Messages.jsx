@@ -9,6 +9,9 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import { Card } from "../components/ui/Card";
 import { cn } from "../lib/cn";
+import { markMessageNotificationsRead } from "../lib/notificationsApi";
+import { isNativeApp } from "../lib/platform";
+import { MobileScreen } from "../components/mobile/MobileShared";
 
 const API = getApiBaseUrl();
 
@@ -17,22 +20,49 @@ function peerName(userLike) {
   return `${userLike.firstName || ""} ${userLike.lastName || ""}`.trim() || "Member";
 }
 
+function formatListTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (sameDay) {
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 function buildThreadsFromConversations(rows, myId) {
   const byPeer = new Map();
   for (const m of rows) {
     const peerId = m.senderId === myId ? m.receiverId : m.senderId;
     const peer =
       m.senderId === myId
-        ? m.Receiver || { id: peerId, firstName: "", lastName: "" }
-        : m.Sender || { id: peerId, firstName: "", lastName: "" };
+        ? m.Receiver || m.peer || { id: peerId, firstName: "", lastName: "" }
+        : m.Sender || m.peer || { id: peerId, firstName: "", lastName: "" };
     const t = new Date(m.createdAt || m.created_at || 0).getTime();
     const cur = byPeer.get(peerId);
     if (!cur || t > cur.sortKey) {
+      const unreadCount =
+        typeof m.unreadCount === "number"
+          ? m.unreadCount
+          : cur?.unreadCount || 0;
       byPeer.set(peerId, {
         userId: peerId,
-        peer,
+        peer: {
+          id: peerId,
+          firstName: peer.firstName || "",
+          lastName: peer.lastName || "",
+          profileImage: peer.profileImage || null,
+        },
         snippet: (m.content || "").slice(0, 120),
         sortKey: t,
+        lastAt: m.createdAt || m.created_at || null,
+        lastFromMe: m.senderId === myId,
+        unreadCount,
       });
     }
   }
@@ -44,6 +74,7 @@ export default function Messages() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const openedFromSearch = location.state?.openChatWith;
+  const native = isNativeApp();
 
   const [threads, setThreads] = useState([]);
   const [threadsLoading, setThreadsLoading] = useState(true);
@@ -59,6 +90,7 @@ export default function Messages() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
   const listBottomRef = useRef(null);
+  const pollRef = useRef(null);
 
   const paramUserId = useMemo(() => {
     const raw = searchParams.get("user");
@@ -96,6 +128,17 @@ export default function Messages() {
     loadThreads();
   }, [loadThreads]);
 
+  // Light polling so inbox updates when a new DM arrives
+  useEffect(() => {
+    if (!token || !user?.id) return undefined;
+    pollRef.current = window.setInterval(() => {
+      loadThreads();
+    }, 20000);
+    return () => {
+      if (pollRef.current) window.clearInterval(pollRef.current);
+    };
+  }, [token, user?.id, loadThreads]);
+
   useEffect(() => {
     const sid = openedFromSearch?.id ?? paramUserId;
     if (sid && sid !== user?.id) {
@@ -112,9 +155,12 @@ export default function Messages() {
         return [
           {
             userId: id,
-            peer: { id, firstName: label || "", lastName: "" },
+            peer: { id, firstName: label || "", lastName: "", profileImage: null },
             snippet: label ? "Tap to open chat" : "Start the conversation…",
             sortKey: Date.now(),
+            lastAt: null,
+            lastFromMe: false,
+            unreadCount: 0,
           },
           ...prev,
         ];
@@ -148,6 +194,10 @@ export default function Messages() {
         }
         if (!res.ok) throw new Error(data.error || `Messages failed (${res.status})`);
         setMessages(Array.isArray(data) ? data : []);
+        markMessageNotificationsRead(token, otherId).catch(() => {});
+        setThreads((prev) =>
+          prev.map((t) => (t.userId === otherId ? { ...t, unreadCount: 0 } : t))
+        );
       } catch (e) {
         setMessagesError(e.message || "Could not load messages");
         setMessages([]);
@@ -173,7 +223,7 @@ export default function Messages() {
   async function handleSend(e) {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || !selectedId || !token) return;
+    if (!text || !selectedId || !token || sending) return;
     setSending(true);
     setSendError("");
     try {
@@ -202,7 +252,7 @@ export default function Messages() {
   }
 
   const selectedThread = threads.find((t) => t.userId === selectedId);
-  const displayName = selectedThread ? peerName(selectedThread.peer) : "";
+  const displayName = selectedThread ? peerName(selectedThread.peer) : "Conversation";
 
   const filteredThreads = threads.filter((t) => {
     const q = listQuery.trim().toLowerCase();
@@ -214,6 +264,304 @@ export default function Messages() {
     setSelectedId(id);
     setMobileShowChat(true);
   };
+
+  const inboxList = (
+    <>
+      <div className={native ? "mob-body" : "border-b border-border p-3"} style={native ? { paddingTop: 8 } : undefined}>
+        <Input
+          placeholder="Search conversations…"
+          value={listQuery}
+          onChange={(e) => setListQuery(e.target.value)}
+          aria-label="Search conversations"
+        />
+      </div>
+      {threadsError && (
+        <div className={native ? "mob-body" : "px-3 py-2"}>
+          <p className="text-sm text-danger" style={{ margin: 0 }}>
+            {threadsError}
+          </p>
+          <button type="button" className={native ? "mob-btn-secondary" : undefined} onClick={loadThreads} style={{ marginTop: 8, minHeight: 44 }}>
+            Retry
+          </button>
+        </div>
+      )}
+      {threadsLoading ? (
+        <p className={native ? "mob-body" : "p-4"} style={{ fontSize: 13, color: "var(--mob-text-muted)" }}>
+          Loading conversations…
+        </p>
+      ) : filteredThreads.length === 0 ? (
+        <p className={native ? "mob-body" : "p-4"} style={{ fontSize: 13, color: "var(--mob-text-muted)" }}>
+          No conversations yet. Open a member profile and tap Send message, or wait for someone to DM you.
+        </p>
+      ) : native ? (
+        <div className="mob-msg-list" data-no-route-swipe>
+          {filteredThreads.map((t) => {
+            const name = peerName(t.peer);
+            const unread = Number(t.unreadCount) || 0;
+            return (
+              <button
+                key={t.userId}
+                type="button"
+                className={`mob-msg-row${unread > 0 ? " mob-msg-row--unread" : ""}`}
+                onClick={() => selectThread(t.userId)}
+              >
+                <Avatar src={t.peer?.profileImage} name={name} size="sm" />
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <span style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontWeight: unread > 0 ? 700 : 600, fontSize: 15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {name}
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--mob-text-muted)", flexShrink: 0 }}>
+                      {formatListTime(t.lastAt)}
+                    </span>
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                    <span
+                      style={{
+                        flex: 1,
+                        fontSize: 12,
+                        color: "var(--mob-text-secondary)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        fontWeight: unread > 0 ? 600 : 400,
+                      }}
+                    >
+                      {t.lastFromMe ? "You: " : ""}
+                      {t.snippet}
+                    </span>
+                    {unread > 0 && <span className="mob-msg-unread-badge">{unread > 99 ? "99+" : unread}</span>}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <ul className="flex-1 overflow-y-auto">
+          {filteredThreads.map((t) => {
+            const name = peerName(t.peer);
+            const active = t.userId === selectedId;
+            const unread = Number(t.unreadCount) || 0;
+            return (
+              <li key={t.userId}>
+                <button
+                  type="button"
+                  onClick={() => selectThread(t.userId)}
+                  className={cn(
+                    "flex w-full items-center gap-3 px-4 py-3 text-left transition ease-out min-h-[44px]",
+                    active
+                      ? "bg-[color-mix(in_oklab,var(--ms-tint)_55%,transparent)] border-l-2 border-ms"
+                      : "hover:bg-surface",
+                    unread > 0 && "font-semibold"
+                  )}
+                >
+                  <Avatar src={t.peer?.profileImage} name={name} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="block font-medium truncate">{name}</span>
+                      {unread > 0 && (
+                        <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[11px] text-primary-foreground">
+                          {unread}
+                        </span>
+                      )}
+                      {active && <span className="badge-ms shrink-0">Active</span>}
+                    </span>
+                    <span className="block text-xs text-muted truncate">
+                      {t.lastFromMe ? "You: " : ""}
+                      {t.snippet}
+                    </span>
+                  </span>
+                  <span className="text-[11px] text-muted shrink-0">{formatListTime(t.lastAt)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
+
+  const chatPane = !selectedId ? (
+    <div className={native ? "mob-body" : "flex flex-1 items-center justify-center p-8 text-muted"}>
+      Select a conversation
+    </div>
+  ) : (
+    <>
+      {!native && (
+        <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+          <button
+            type="button"
+            className="md:hidden text-sm text-primary min-h-[44px]"
+            onClick={() => {
+              setMobileShowChat(false);
+              setSelectedId(null);
+            }}
+          >
+            ← Back
+          </button>
+          <Avatar src={selectedThread?.peer?.profileImage} name={displayName} size="sm" />
+          <span className="font-semibold">{displayName}</span>
+        </header>
+      )}
+      <div className={native ? "mob-msg-thread" : "flex-1 overflow-y-auto p-4 space-y-3"} data-no-route-swipe>
+        {messagesLoading ? (
+          <p style={{ fontSize: 13, color: "var(--mob-text-muted)" }}>Loading messages…</p>
+        ) : messagesError ? (
+          <div>
+            <Badge variant="danger">{messagesError}</Badge>
+            <button type="button" className="mob-btn-secondary" style={{ marginTop: 8, minHeight: 44 }} onClick={() => loadMessages(selectedId)}>
+              Retry
+            </button>
+          </div>
+        ) : messages.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--mob-text-muted)" }}>No messages yet — say hello below.</p>
+        ) : (
+          messages.map((m) => {
+            const mine = m.senderId === user.id;
+            return (
+              <div
+                key={m.id}
+                className={native ? undefined : cn("flex", mine ? "justify-end" : "justify-start")}
+                style={native ? { display: "flex", justifyContent: mine ? "flex-end" : "flex-start" } : undefined}
+              >
+                <div
+                  className={
+                    native
+                      ? `mob-msg-bubble ${mine ? "mob-msg-bubble--mine" : "mob-msg-bubble--theirs"}`
+                      : cn(
+                          "max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
+                          mine
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-surface border border-border text-foreground"
+                        )
+                  }
+                >
+                  {m.content}
+                  <p className={native ? "mob-msg-time" : cn("mt-1 text-xs opacity-70", mine ? "text-right" : "")}>
+                    {m.createdAt
+                      ? new Date(m.createdAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : ""}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={listBottomRef} />
+      </div>
+      <form
+        className={native ? "mob-msg-composer" : "flex flex-col gap-2 border-t border-border p-4 sm:flex-row"}
+        onSubmit={handleSend}
+        data-no-route-swipe
+      >
+        <Input
+          className="flex-1"
+          placeholder="Type a message…"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          disabled={sending}
+          aria-label="Message text"
+        />
+        <Button type="submit" loading={sending} disabled={sending || !draft.trim()}>
+          Send
+        </Button>
+        {sendError && <Badge variant="danger">{sendError}</Badge>}
+      </form>
+    </>
+  );
+
+  if (native) {
+    if (mobileShowChat && selectedId) {
+      const composer = (
+        <form className="mob-msg-composer" onSubmit={handleSend} data-no-route-swipe>
+          <input
+            className="mob-search-input"
+            style={{ flex: 1, minHeight: 44 }}
+            placeholder="Type a message…"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={sending}
+            aria-label="Message text"
+          />
+          <button
+            type="submit"
+            className="mob-btn-primary"
+            style={{ minHeight: 44, padding: "0 16px", flexShrink: 0 }}
+            disabled={sending || !draft.trim()}
+          >
+            {sending ? "…" : "Send"}
+          </button>
+        </form>
+      );
+      return (
+        <MobileScreen
+          title={displayName}
+          onBack={() => {
+            setMobileShowChat(false);
+            setSelectedId(null);
+            loadThreads();
+          }}
+          footer={composer}
+          className="mob-screen--messages"
+        >
+          <div className="mob-msg-thread" data-no-route-swipe>
+            {messagesLoading ? (
+              <p style={{ fontSize: 13, color: "var(--mob-text-muted)" }}>Loading messages…</p>
+            ) : messagesError ? (
+              <div>
+                <Badge variant="danger">{messagesError}</Badge>
+                <button
+                  type="button"
+                  className="mob-btn-secondary"
+                  style={{ marginTop: 8, minHeight: 44 }}
+                  onClick={() => loadMessages(selectedId)}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : messages.length === 0 ? (
+              <p style={{ fontSize: 13, color: "var(--mob-text-muted)" }}>No messages yet — say hello below.</p>
+            ) : (
+              messages.map((m) => {
+                const mine = m.senderId === user.id;
+                return (
+                  <div key={m.id} style={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start" }}>
+                    <div className={`mob-msg-bubble ${mine ? "mob-msg-bubble--mine" : "mob-msg-bubble--theirs"}`}>
+                      {m.content}
+                      <p className="mob-msg-time">
+                        {m.createdAt
+                          ? new Date(m.createdAt).toLocaleString([], {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : ""}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            {sendError && <Badge variant="danger">{sendError}</Badge>}
+            <div ref={listBottomRef} />
+          </div>
+        </MobileScreen>
+      );
+    }
+
+    return (
+      <MobileScreen title="Messages" backTo="/">
+        {inboxList}
+      </MobileScreen>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -231,52 +579,8 @@ export default function Messages() {
             mobileShowChat && "hidden md:flex"
           )}
         >
-          <div className="border-b border-border p-3">
-            <Input
-              placeholder="Search conversations…"
-              value={listQuery}
-              onChange={(e) => setListQuery(e.target.value)}
-              aria-label="Search conversations"
-            />
-          </div>
-          {threadsError && (
-            <p className="px-3 py-2 text-sm text-danger">{threadsError}</p>
-          )}
-          {threadsLoading ? (
-            <p className="p-4 text-sm text-muted">Loading conversations…</p>
-          ) : filteredThreads.length === 0 ? (
-            <p className="p-4 text-sm text-muted">No conversations yet.</p>
-          ) : (
-            <ul className="flex-1 overflow-y-auto">
-              {filteredThreads.map((t) => {
-                const name = peerName(t.peer);
-                const active = t.userId === selectedId;
-                return (
-                  <li key={t.userId}>
-                    <button
-                      type="button"
-                      onClick={() => selectThread(t.userId)}
-                      className={cn(
-                        "flex w-full items-center gap-3 px-4 py-3 text-left transition ease-out min-h-[44px]",
-                        active ? "bg-[color-mix(in_oklab,var(--ms-tint)_55%,transparent)] border-l-2 border-ms" : "hover:bg-surface"
-                      )}
-                    >
-                      <Avatar name={name} size="sm" />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="block font-medium truncate">{name}</span>
-                          {active && <span className="badge-ms shrink-0">Active</span>}
-                        </span>
-                        <span className="block text-xs text-muted truncate">{t.snippet}</span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          {inboxList}
         </aside>
-
         <section
           className={cn(
             "flex flex-1 flex-col min-h-0",
@@ -284,81 +588,7 @@ export default function Messages() {
             !selectedId && "flex"
           )}
         >
-          {!selectedId ? (
-            <div className="flex flex-1 items-center justify-center p-8 text-muted">
-              Select a conversation
-            </div>
-          ) : (
-            <>
-              <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-                <button
-                  type="button"
-                  className="md:hidden text-sm text-primary min-h-[44px]"
-                  onClick={() => setMobileShowChat(false)}
-                >
-                  ← Back
-                </button>
-                <Avatar name={displayName} size="sm" />
-                <span className="font-semibold">{displayName}</span>
-              </header>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messagesLoading ? (
-                  <p className="text-sm text-muted">Loading messages…</p>
-                ) : messagesError ? (
-                  <Badge variant="danger">{messagesError}</Badge>
-                ) : messages.length === 0 ? (
-                  <p className="text-sm text-muted">No messages yet — say hello below.</p>
-                ) : (
-                  messages.map((m) => {
-                    const mine = m.senderId === user.id;
-                    return (
-                      <div
-                        key={m.id}
-                        className={cn("flex", mine ? "justify-end" : "justify-start")}
-                      >
-                        <div
-                          className={cn(
-                            "max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
-                            mine
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-surface border border-border text-foreground"
-                          )}
-                        >
-                          {m.content}
-                          <p className={cn("mt-1 text-xs opacity-70", mine ? "text-right" : "")}>
-                            {m.createdAt
-                              ? new Date(m.createdAt).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : ""}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={listBottomRef} />
-              </div>
-              <form
-                className="flex flex-col gap-2 border-t border-border p-4 sm:flex-row"
-                onSubmit={handleSend}
-              >
-                <Input
-                  className="flex-1"
-                  placeholder="Type a message…"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  disabled={sending}
-                  aria-label="Message text"
-                />
-                <Button type="submit" loading={sending} disabled={sending || !draft.trim()}>
-                  Send
-                </Button>
-                {sendError && <Badge variant="danger" className="sm:col-span-2">{sendError}</Badge>}
-              </form>
-            </>
-          )}
+          {chatPane}
         </section>
       </Card>
     </div>

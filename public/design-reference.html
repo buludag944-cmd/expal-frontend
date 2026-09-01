@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EXPal - Design Reference</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-color: #f6f8fa;
+      --card-bg: #ffffff;
+      --accent: #8ecae6;
+      --accent-light: #caf0f8;
+      --text-dark: #1e293b;
+      --text-light: #64748b;
+      --radius: 16px;
+    }
+    body { margin: 0; font-family: Inter, sans-serif; background: var(--bg-color); color: var(--text-dark); }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px;
+      background: linear-gradient(90deg, var(--accent-light), var(--accent));
+      color: #fff; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo img { height: 40px; width: 40px; border-radius: 10px; }
+    .logo h1 { font-size: 22px; font-weight: 600; margin: 0; }
+    .motto { font-size: 13px; color: #f0f9ff; }
+    main { padding: 20px; }
+    .feed { display: flex; flex-direction: column; gap: 16px; }
+    .card {
+      background: var(--card-bg); border-radius: var(--radius);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 16px;
+    }
+    nav {
+      position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg);
+      display: flex; justify-content: space-around; padding: 10px 0;
+      box-shadow: 0 -1px 6px rgba(0,0,0,0.05);
+    }
+    nav a { text-decoration: none; color: var(--text-light); font-size: 13px; }
+    nav a.active { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <p style="padding:12px;text-align:center;font-size:13px;color:#64748b">Brand reference — live app uses React components with these tokens.</p>
+</body>
+</html>

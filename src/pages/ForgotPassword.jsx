@@ -46,6 +46,10 @@ export default function ForgotPassword() {
         <p className="text-sm text-muted text-center">
           Enter your email and we will send a secure reset link if an account exists.
         </p>
+        <p className="text-xs text-muted text-center">
+          Signed up with Google? Use <strong>Continue with Google</strong> on the login page — no
+          password reset needed.
+        </p>
 
         {done ? (
           <div className="space-y-3">

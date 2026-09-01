@@ -3,8 +3,11 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { Lightbulb } from "lucide-react";
 import { useAuth } from "../AuthContext";
 import CommentsSection from "../components/CommentsSection";
+import Button from "../components/ui/Button";
 import { getApiBaseUrl } from "../apiConfig";
 import { cn } from "../lib/cn";
+import { isNativeApp } from "../lib/platform";
+import { MobileContentList, MobileContentDetail, KNOWHOW_CONFIG } from "./mobile/MobileContentLibrary";
 
 const API = getApiBaseUrl();
 
@@ -45,31 +48,81 @@ function KnowHowDetail({ id }) {
   const [post, setPost] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ title: "", category: "", content: "" });
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(() => {
     setLoading(true);
     setError("");
-    fetch(`${API}/api/knowhow/${id}`)
+    return fetch(`${API}/api/knowhow/${id}`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || `Load failed (${res.status})`);
         return data;
       })
       .then((data) => {
-        if (!cancelled) setPost(data);
+        setPost(data);
+        setForm({
+          title: data.title || "",
+          category: data.category || "General",
+          content: data.content || "",
+        });
       })
-      .catch((e) => {
-        if (!cancelled) setError(e.message || "Could not load post");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .catch((e) => setError(e.message || "Could not load post"))
+      .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const isOwner = post && (Number(user?.id) === Number(post.createdBy) || user?.isAdmin);
+
+  const savePost = async () => {
+    if (!token) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`${API}/api/knowhow/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update post");
+      setPost(data);
+      setEditing(false);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removePost = async () => {
+    if (!token || !window.confirm("Delete this post?")) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`${API}/api/knowhow/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok && res.status !== 204) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete post");
+      }
+      navigate("/knowhow", { replace: true });
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -106,9 +159,57 @@ function KnowHowDetail({ id }) {
       <p className="text-sm md:text-base text-muted mb-6 md:mb-8">
         By {authorLabel(post)} · {formatDate(post.createdAt)}
       </p>
-      <div className="prose prose-sm max-w-none text-foreground mb-8 md:mb-10">{post.content}</div>
+      {editing ? (
+        <div className="space-y-4 mb-8">
+          <input
+            className="form-input w-full"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+          />
+          <select
+            className="form-input w-full"
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+          >
+            {DEFAULT_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <textarea
+            className="form-input form-textarea w-full"
+            rows={8}
+            value={form.content}
+            onChange={(e) => setForm({ ...form, content: e.target.value })}
+          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={savePost} loading={busy} disabled={busy}>
+              Save
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setEditing(false)} disabled={busy}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="prose prose-sm max-w-none text-foreground mb-4">{post.content}</div>
+          {isOwner && (
+            <div className="flex gap-2 mb-8">
+              <Button size="sm" variant="secondary" onClick={() => setEditing(true)} disabled={busy}>
+                Edit post
+              </Button>
+              <Button size="sm" variant="secondary" onClick={removePost} disabled={busy}>
+                Delete post
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+      {error && <p className="form-error-text mb-4">{error}</p>}
       <div className="border-t border-border pt-6 md:pt-8 lborder-kh pl-4">
-        <CommentsSection targetType="knowhow" targetId={post.id} apiBase={API} user={user} />
+        <CommentsSection targetType="knowhow" targetId={post.id} apiBase={API} user={user} token={token} />
       </div>
     </article>
   );
@@ -291,10 +392,12 @@ function KnowHowList() {
 
 export default function LocalKnowHow() {
   const { id } = useParams();
+  const native = isNativeApp();
 
   if (id) {
     const num = Number(id);
     if (!Number.isInteger(num) || num < 1) {
+      if (native) return <MobileContentList config={KNOWHOW_CONFIG} />;
       return (
         <div className={sectionWrap}>
           <p className="form-error-text">Invalid post.</p>
@@ -304,8 +407,10 @@ export default function LocalKnowHow() {
         </div>
       );
     }
+    if (native) return <MobileContentDetail config={KNOWHOW_CONFIG} id={num} />;
     return <KnowHowDetail id={num} />;
   }
 
+  if (native) return <MobileContentList config={KNOWHOW_CONFIG} />;
   return <KnowHowList />;
 }

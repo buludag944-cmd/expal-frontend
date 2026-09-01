@@ -1,8 +1,13 @@
-Download GoogleService-Info.plist from Firebase and save it HERE:
+GoogleService-Info.plist lives here:
 
   ios/App/App/GoogleService-Info.plist
 
-Firebase Console → Project expal-app-1ab1a → Add app → iOS
+Firebase starts in AppDelegate.swift (FirebaseApp.configure) — not the SwiftUI @main template.
+
+Download from Firebase (iOS app, bundle id com.yourbrand.expal) and replace this file.
+It must be in the App target → Build Phases → Copy Bundle Resources (already wired in project.pbxproj).
+
+Firebase Console → Project expalapp-a6422 → Add app → iOS
 Bundle ID: com.yourbrand.expal
 
 See ../../IOS_PUSH_SETUP.md for full steps.

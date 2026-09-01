@@ -8,6 +8,7 @@
     "@capacitor/core": "^8.3.4",
     "@capacitor/ios": "^8.3.4",
     "@capacitor-firebase/messaging": "^8.2.0",
+    "@capacitor-firebase/authentication": "^8.2.0",
     "firebase": "^12.6.0",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
@@ -26,16 +27,28 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "prebuild": "node scripts/ensure-logo.js",
     "build": "react-scripts build",
+    "build:netlify": "bash scripts/build-netlify.sh",
+    "netlify:zip": "bash scripts/package-netlify-zip.sh",
+    "firebase:deploy": "npm run build:netlify && firebase deploy --only hosting",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "cap:sync": "npm run build && npx cap copy",
+    "cap:sync": "bash scripts/cap-sync.sh",
+    "cap:deploy": "bash scripts/cap-sync.sh && npx cap copy",
     "cap:copy": "npx cap copy",
     "cap:ios": "npx cap open ios",
+    "ios:sync": "bash scripts/build-ios-sync.sh",
+    "ios:verify-firebase": "node scripts/verify-google-services-ios.js",
+    "ios:github-secrets": "echo 'See IOS_GITHUB_CI.md for required GitHub Actions secrets'",
     "cap:android": "npx cap open android",
+    "android:build": "cd android && JAVA_HOME=\"/Applications/Android Studio.app/Contents/jbr/Contents/Home\" ./gradlew assembleDebug",
+    "android:sha1": "keytool -list -v -alias androiddebugkey -keystore \"$HOME/.android/debug.keystore\" -storepass android | grep -E 'SHA1:|SHA256:'",
     "cap:assets": "npx @capacitor/assets generate --ios --android",
     "logo:apply": "node scripts/apply-logo.js",
-    "logo:apply:cap": "node scripts/apply-logo.js --cap"
+    "android:release": "cd android && ./gradlew bundleRelease",
+    "android:bundle": "bash scripts/build-android-bundle.sh",
+    "store:prep": "npm run build:netlify && npm run logo:apply -- --cap && npx cap sync android"
   },
   "eslintConfig": {
     "extends": [

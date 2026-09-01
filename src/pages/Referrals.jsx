@@ -2,58 +2,84 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
 import CommentsSection from "../components/CommentsSection";
 import { getApiBaseUrl } from "../apiConfig";
+import { isNativeApp } from "../lib/platform";
+import MobileReferrals from "./mobile/MobileReferrals";
 import Avatar from "../components/ui/Avatar";
 import { Share2 } from "lucide-react";
 import Button from "../components/ui/Button";
 import Input, { Textarea } from "../components/ui/Input";
 import { Card, CardContent } from "../components/ui/Card";
+import Badge from "../components/ui/Badge";
 
 const API = getApiBaseUrl();
+
+function canModifyReferral(user, referral) {
+  if (!user) return false;
+  const ownerId = referral.userId ?? referral.User?.id;
+  return Number(ownerId) === Number(user.id) || !!user.isAdmin;
+}
 
 export default function Referrals() {
   const { token, user } = useAuth();
   const [referrals, setReferrals] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
     profession: "",
     company: "",
     message: "",
   });
+  const authHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
 
-  useEffect(() => {
+  const loadReferrals = () => {
     fetch(`${API}/api/referrals`)
       .then((res) => res.json())
       .then(setReferrals)
       .catch(console.error);
+  };
+
+  useEffect(() => {
+    loadReferrals();
   }, []);
+
+  const resetForm = () => {
+    setForm({ name: "", profession: "", company: "", message: "" });
+    setEditingId(null);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError("");
+    if (!token) {
+      setError("You must be logged in.");
+      return;
+    }
     const isEditing = editingId !== null;
     const url = isEditing ? `${API}/api/referrals/${editingId}` : `${API}/api/referrals`;
     fetch(url, {
       method: isEditing ? "PUT" : "POST",
-      headers: isEditing
-        ? { "Content-Type": "application/json" }
-        : {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-      body: JSON.stringify(form),
+      headers: authHeaders,
+      body: JSON.stringify({
+        ...form,
+        company: (form.company || "").trim() || "Open",
+      }),
     })
-      .then((res) => res.json())
-      .then((saved) => {
-        if (isEditing) {
-          setReferrals((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
-        } else {
-          setReferrals((prev) => [...prev, saved]);
-        }
-        setEditingId(null);
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Save failed");
+        return data;
       })
-      .catch(console.error);
-
-    setForm({ name: "", profession: "", company: "", message: "" });
+      .then(() => {
+        resetForm();
+        setShowForm(false);
+        loadReferrals();
+      })
+      .catch((err) => setError(err.message));
   };
 
   const startEditReferral = (r) => {
@@ -67,17 +93,44 @@ export default function Referrals() {
   };
 
   const handleDeleteReferral = (id) => {
-    fetch(`${API}/api/referrals/${id}`, { method: "DELETE" })
+    if (!window.confirm("Delete this referral?")) return;
+    fetch(`${API}/api/referrals/${id}`, { method: "DELETE", headers: authHeaders })
       .then((res) => {
-        if (!res.ok) throw new Error(`Failed to delete referral ${id}`);
+        if (!res.ok && res.status !== 204) {
+          return res.json().then((d) => {
+            throw new Error(d.error || "Delete failed");
+          });
+        }
       })
-      .then(() => setReferrals((prev) => prev.filter((r) => r.id !== id)))
-      .catch(console.error);
-    if (editingId === id) {
-      setEditingId(null);
-      setForm({ name: "", profession: "", company: "", message: "" });
-    }
+      .then(() => {
+        setReferrals((prev) => prev.filter((r) => r.id !== id));
+        if (editingId === id) resetForm();
+      })
+      .catch((err) => setError(err.message));
   };
+
+  const native = isNativeApp();
+
+  if (native) {
+    return (
+      <MobileReferrals
+        referrals={referrals}
+        user={user}
+        token={token}
+        form={form}
+        setForm={setForm}
+        handleSubmit={handleSubmit}
+        editingId={editingId}
+        resetForm={resetForm}
+        error={error}
+        startEditReferral={startEditReferral}
+        handleDeleteReferral={handleDeleteReferral}
+        canModifyReferral={canModifyReferral}
+        showForm={showForm}
+        setShowForm={setShowForm}
+      />
+    );
+  }
 
   return (
     <section className="space-y-8">
@@ -94,9 +147,13 @@ export default function Referrals() {
         </p>
       </header>
 
+      {error && <Badge variant="danger">{error}</Badge>}
+
       <Card>
         <CardContent className="space-y-4 pt-6">
-          <h2 className="text-lg font-semibold">Ask for a referral</h2>
+          <h2 className="text-lg font-semibold">
+            {editingId ? "Edit referral" : "Ask for a referral"}
+          </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               placeholder="Name"
@@ -111,10 +168,9 @@ export default function Referrals() {
               required
             />
             <Input
-              placeholder="Company"
+              placeholder="Company (optional)"
               value={form.company}
               onChange={(e) => setForm({ ...form, company: e.target.value })}
-              required
             />
             <Textarea
               placeholder="Message"
@@ -127,14 +183,7 @@ export default function Referrals() {
                 {editingId !== null ? "Save changes" : "Submit referral request"}
               </Button>
               {editingId !== null && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setEditingId(null);
-                    setForm({ name: "", profession: "", company: "", message: "" });
-                  }}
-                >
+                <Button type="button" variant="secondary" onClick={resetForm}>
                   Cancel
                 </Button>
               )}
@@ -162,7 +211,7 @@ export default function Referrals() {
                   <p className="text-xs text-muted">Company: {r.company}</p>
                 )}
                 <p className="text-xs text-muted">Posted by {author}</p>
-                {user && String(r.userId) === String(user.id) && (
+                {canModifyReferral(user, r) && (
                   <div className="flex gap-2">
                     <Button variant="secondary" size="sm" onClick={() => startEditReferral(r)}>
                       Edit
@@ -178,6 +227,7 @@ export default function Referrals() {
                     targetId={r.id}
                     apiBase={API}
                     user={user}
+                    token={token}
                   />
                 </div>
               </CardContent>

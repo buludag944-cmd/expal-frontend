@@ -144,7 +144,7 @@ jobs:
             ).select { |profile| profile.bundle_id&.identifier == bundle_id }
           end
 
-          delete_profile! = lambda do |profile, reason|
+          delete_profile = lambda do |profile, reason|
             puts "Deleting profile '#{profile.name}' (#{profile.id}) — #{reason}"
             begin
               profile.delete!
@@ -174,7 +174,7 @@ jobs:
             puts "No stale EXPal App Store profiles to delete."
           else
             stale.each do |profile|
-              delete_profile!.call(profile, "stale/rotated cert (not #{cert_id})")
+              delete_profile.call(profile, "stale/rotated cert (not #{cert_id})")
             end
             remaining_stale = fetch_profiles.call.select do |profile|
               stale_ids = stale.map(&:id)
@@ -201,7 +201,7 @@ jobs:
 
           if profile && matching.size > 1
             matching.reject { |candidate| candidate.id == profile.id }.each do |dup|
-              delete_profile!.call(dup, "duplicate for cert #{cert_id}")
+              delete_profile.call(dup, "duplicate for cert #{cert_id}")
             end
           end
 
@@ -212,7 +212,7 @@ jobs:
             taken = Spaceship::ConnectAPI::Profile.all(filter: { name: desired_name })
               .find { |candidate| candidate.name == desired_name }
             if taken
-              delete_profile!.call(taken, "name '#{desired_name}' occupied without matching cert")
+              delete_profile.call(taken, "name '#{desired_name}' occupied without matching cert")
             end
             puts "Creating App Store profile '#{desired_name}' with cert #{cert_id}"
             profile = Spaceship::ConnectAPI::Profile.create(

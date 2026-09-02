@@ -83,19 +83,38 @@ jobs:
               }, f)
           print(f"Wrote {path}")
           PY
-          fastlane sigh \
-            --app_identifier com.yourbrand.expal \
-            --team_id "$APPLE_TEAM_ID" \
-            --provisioning_name "EXPal App Store" \
-            --api_key_path "$RUNNER_TEMP/asc_api_key.json" \
-            --force \
-            --skip_certificate_verification true
+          KEYCHAIN_SHA=$(security find-certificate -c "Apple Distribution" -Z ~/Library/Keychains/login.keychain-db 2>/dev/null | awk '/SHA-1 hash:/ {print $3; exit}')
+          echo "Keychain distribution SHA-1: $KEYCHAIN_SHA"
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILE_DIR"
-          PP="$(find "$GITHUB_WORKSPACE" -name 'AppStore_com.yourbrand.expal.mobileprovision' | head -1)"
-          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(security cms -D -i "$PP")")
-          cp "$PP" "$PROFILE_DIR/$UUID.mobileprovision"
-          echo "Installed provisioning profile: EXPal App Store ($UUID)"
+          PP_PATH="$RUNNER_TEMP/ExpalAppStore.mobileprovision"
+          SELECTED_CERT=""
+          for CERT_ID in SB54D2Z9VS S4N8727YZL Q7XF5XGRKR; do
+            echo "Trying distribution certificate id: $CERT_ID"
+            fastlane sigh \
+              --app_identifier com.yourbrand.expal \
+              --team_id "$APPLE_TEAM_ID" \
+              --provisioning_name "EXPal App Store" \
+              --api_key_path "$RUNNER_TEMP/asc_api_key.json" \
+              --cert_id "$CERT_ID" \
+              --force \
+              --skip_certificate_verification true \
+              --skip_install true \
+              --filename "$PP_PATH"
+            PROFILE_SHA=$(/usr/libexec/PlistBuddy -c "Print DeveloperCertificates:0" /dev/stdin <<< "$(security cms -D -i "$PP_PATH")" | openssl x509 -inform DER -noout -fingerprint -sha1 | tr -d ':' | cut -d= -f2 | tr '[:upper:]' '[:lower:]')
+            echo "Profile cert SHA-1: $PROFILE_SHA"
+            if [ "$PROFILE_SHA" = "$(echo "$KEYCHAIN_SHA" | tr '[:upper:]' '[:lower:]')" ]; then
+              SELECTED_CERT="$CERT_ID"
+              break
+            fi
+          done
+          if [ -z "$SELECTED_CERT" ]; then
+            echo "Could not create a provisioning profile for the imported distribution certificate."
+            exit 1
+          fi
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(security cms -D -i "$PP_PATH")")
+          cp "$PP_PATH" "$PROFILE_DIR/$UUID.mobileprovision"
+          echo "Installed provisioning profile EXPal App Store with cert $SELECTED_CERT ($UUID)"
 
       - name: Archive iOS app
         working-directory: ios/App

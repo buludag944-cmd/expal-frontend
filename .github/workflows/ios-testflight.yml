@@ -69,11 +69,13 @@ jobs:
           APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          set -euo pipefail
           gem install fastlane --no-document
-          python3 <<'PY'
-          import json, os
-          path = os.path.join(os.environ["RUNNER_TEMP"], "asc_api_key.json")
-          with open(path, "w", encoding="utf-8") as f:
+
+          API_KEY_JSON="$RUNNER_TEMP/asc_api_key.json"
+          python3 - "$API_KEY_JSON" <<'PY'
+          import json, os, sys
+          with open(sys.argv[1], "w", encoding="utf-8") as f:
               json.dump({
                   "key_id": os.environ["APPSTORE_KEY_ID"],
                   "issuer_id": os.environ["APPSTORE_ISSUER_ID"],
@@ -81,8 +83,8 @@ jobs:
                   "duration": 1200,
                   "in_house": False,
               }, f)
-          print(f"Wrote {path}")
           PY
+
           KEYCHAIN_SHA=$(security find-identity -v -p codesigning | awk '/Apple Distribution/ {print tolower($2); exit}')
           echo "Keychain distribution SHA-1: $KEYCHAIN_SHA"
           if [ -z "$KEYCHAIN_SHA" ]; then
@@ -90,42 +92,177 @@ jobs:
             security find-identity -v -p codesigning || true
             exit 1
           fi
+
+          # Intentionally bypass sigh file writing: we need SHA-1→cert matching and
+          # stale-profile cleanup that sigh's --force/--cert_id loop does not do cleanly.
+          # ASC API key must be able to manage certificates/profiles (Admin or Developer
+          # access to Certificates, Identifiers & Profiles — App Manager alone is not enough).
+          PP_PATH="$RUNNER_TEMP/ExpalAppStore.mobileprovision"
+          META_JSON="$RUNNER_TEMP/profile_meta.json"
+          ruby -e 'require "spaceship"' || {
+            echo "Ruby cannot load spaceship after gem install. Gem env:"
+            gem env
+            exit 1
+          }
+          ruby - "$API_KEY_JSON" "$KEYCHAIN_SHA" "$PP_PATH" "$META_JSON" <<'RUBY'
+          require "base64"
+          require "json"
+          require "openssl"
+          require "spaceship"
+
+          api_key_path, want_sha, out_path, meta_path = ARGV
+          want_sha = want_sha.downcase
+          bundle_id = "com.yourbrand.expal"
+          desired_name = "EXPal App Store"
+          profile_type = Spaceship::ConnectAPI::Profile::ProfileType::IOS_APP_STORE
+
+          Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.from(filepath: api_key_path)
+
+          certs = Spaceship::ConnectAPI::Certificate.all(
+            filter: {
+              certificateType: [
+                Spaceship::ConnectAPI::Certificate::CertificateType::DISTRIBUTION,
+                Spaceship::ConnectAPI::Certificate::CertificateType::IOS_DISTRIBUTION
+              ].join(",")
+            }
+          )
+          match_cert = certs.find do |cert|
+            raw = Base64.decode64(cert.certificate_content)
+            OpenSSL::Digest::SHA1.hexdigest(raw) == want_sha
+          end
+          abort("No App Store Connect distribution certificate matches keychain SHA #{want_sha}") unless match_cert
+          cert_id = match_cert.id
+          puts "Matched distribution cert_id=#{cert_id} (#{match_cert.display_name})"
+
+          bundle = Spaceship::ConnectAPI::BundleId.find(bundle_id)
+          abort("Bundle id #{bundle_id} not found in App Store Connect") unless bundle
+
+          fetch_profiles = lambda do
+            Spaceship::ConnectAPI::Profile.all(
+              filter: { profileType: profile_type },
+              includes: "bundleId,certificates"
+            ).select { |profile| profile.bundle_id&.identifier == bundle_id }
+          end
+
+          delete_profile! = lambda do |profile, reason|
+            puts "Deleting profile '#{profile.name}' (#{profile.id}) — #{reason}"
+            begin
+              profile.delete!
+            rescue => e
+              abort(
+                "Failed to delete profile '#{profile.name}' (#{profile.id}): #{e.class}: #{e.message}. " \
+                "ASC API key likely lacks Certificates/Profiles permission " \
+                "(needs Admin or Developer access, not App Manager alone)."
+              )
+            end
+          end
+
+          profiles = fetch_profiles.call
+          puts "Found #{profiles.size} App Store profile(s) for #{bundle_id}:"
+          profiles.each do |profile|
+            cert_ids = Array(profile.certificates).map(&:id)
+            puts "  - '#{profile.name}' (#{profile.id}) certs=#{cert_ids.join(",")}"
+          end
+
+          # Drop profiles tied to rotated certs (and timestamped copies from past --force runs).
+          stale = profiles.select do |profile|
+            cert_ids = Array(profile.certificates).map(&:id)
+            next false if cert_ids.include?(cert_id)
+            profile.name == desired_name || profile.name.start_with?("#{desired_name} ")
+          end
+          if stale.empty?
+            puts "No stale EXPal App Store profiles to delete."
+          else
+            stale.each do |profile|
+              delete_profile!.call(profile, "stale/rotated cert (not #{cert_id})")
+            end
+            remaining_stale = fetch_profiles.call.select do |profile|
+              stale_ids = stale.map(&:id)
+              stale_ids.include?(profile.id)
+            end
+            unless remaining_stale.empty?
+              names = remaining_stale.map { |p| "'#{p.name}' (#{p.id})" }.join(", ")
+              abort(
+                "Stale profiles still present after delete: #{names}. " \
+                "ASC API key likely cannot manage provisioning profiles " \
+                "(needs Admin or Developer access)."
+              )
+            end
+            puts "Verified #{stale.size} stale profile(s) deleted."
+          end
+
+          profiles = fetch_profiles.call
+          matching = profiles.select do |candidate|
+            Array(candidate.certificates).map(&:id).include?(cert_id)
+          end
+
+          profile = matching.find { |candidate| candidate.name == desired_name } || matching.first
+          action = nil
+
+          if profile && matching.size > 1
+            matching.reject { |candidate| candidate.id == profile.id }.each do |dup|
+              delete_profile!.call(dup, "duplicate for cert #{cert_id}")
+            end
+          end
+
+          if profile
+            action = "reused"
+            puts "Reusing existing profile '#{profile.name}' (#{profile.id}) for cert #{cert_id}"
+          else
+            taken = Spaceship::ConnectAPI::Profile.all(filter: { name: desired_name })
+              .find { |candidate| candidate.name == desired_name }
+            if taken
+              delete_profile!.call(taken, "name '#{desired_name}' occupied without matching cert")
+            end
+            puts "Creating App Store profile '#{desired_name}' with cert #{cert_id}"
+            profile = Spaceship::ConnectAPI::Profile.create(
+              name: desired_name,
+              profile_type: profile_type,
+              bundle_id_id: bundle.id,
+              certificate_ids: [cert_id],
+              device_ids: []
+            )
+            action = "created"
+          end
+
+          abort("Profile has no profileContent") if profile.profile_content.to_s.empty?
+          File.binwrite(out_path, Base64.decode64(profile.profile_content))
+          meta = {
+            "action" => action,
+            "cert_id" => cert_id,
+            "uuid" => profile.uuid,
+            "name" => profile.name,
+            "path" => out_path
+          }
+          File.write(meta_path, JSON.pretty_generate(meta))
+          puts "Wrote provisioning profile to #{out_path} (#{action})"
+          puts JSON.pretty_generate(meta)
+          RUBY
+
+          test -f "$PP_PATH"
+          PROFILE_UUID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["uuid"])' "$META_JSON")
+          PROFILE_NAME=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["name"])' "$META_JSON")
+          SELECTED_CERT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["cert_id"])' "$META_JSON")
+          PROFILE_ACTION=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["action"])' "$META_JSON")
+
+          # Confirm the on-disk profile matches the imported distribution identity.
+          python3 - "$PP_PATH" "$KEYCHAIN_SHA" <<'PY'
+          import hashlib, plistlib, subprocess, sys
+          path, want = sys.argv[1], sys.argv[2].lower()
+          raw = subprocess.check_output(["security", "cms", "-D", "-i", path])
+          sha = hashlib.sha1(plistlib.loads(raw)["DeveloperCertificates"][0]).hexdigest()
+          if sha != want:
+              raise SystemExit(f"Profile cert SHA {sha} does not match keychain {want}")
+          print(f"Verified profile cert SHA-1: {sha}")
+          PY
+
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILE_DIR"
-          PP_PATH="$RUNNER_TEMP/ExpalAppStore.mobileprovision"
-          SELECTED_CERT=""
-          for CERT_ID in SB54D2Z9VS S4N8727YZL Q7XF5XGRKR; do
-            echo "Trying distribution certificate id: $CERT_ID"
-            fastlane sigh \
-              --app_identifier com.yourbrand.expal \
-              --team_id "$APPLE_TEAM_ID" \
-              --provisioning_name "EXPal App Store" \
-              --api_key_path "$RUNNER_TEMP/asc_api_key.json" \
-              --cert_id "$CERT_ID" \
-              --force \
-              --skip_certificate_verification true \
-              --skip_install true \
-              --filename "$PP_PATH"
-            PROFILE_SHA=$(python3 - "$PP_PATH" <<'PY'
-          import hashlib, plistlib, subprocess, sys
-          raw = subprocess.check_output(["security", "cms", "-D", "-i", sys.argv[1]])
-          cert = plistlib.loads(raw)["DeveloperCertificates"][0]
-          print(hashlib.sha1(cert).hexdigest())
-          PY
-            )
-            echo "Profile cert SHA-1: $PROFILE_SHA"
-            if [ "$PROFILE_SHA" = "$KEYCHAIN_SHA" ]; then
-              SELECTED_CERT="$CERT_ID"
-              break
-            fi
-          done
-          if [ -z "$SELECTED_CERT" ]; then
-            echo "Could not create a provisioning profile for the imported distribution certificate."
-            exit 1
-          fi
-          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(security cms -D -i "$PP_PATH")")
-          cp "$PP_PATH" "$PROFILE_DIR/$UUID.mobileprovision"
-          echo "Installed provisioning profile EXPal App Store with cert $SELECTED_CERT ($UUID)"
+          cp "$PP_PATH" "$PROFILE_DIR/$PROFILE_UUID.mobileprovision"
+
+          echo "PROVISIONING_PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+          echo "PROVISIONING_PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+          echo "Installed provisioning profile '$PROFILE_NAME' with cert $SELECTED_CERT ($PROFILE_UUID) action=$PROFILE_ACTION"
 
       - name: Archive iOS app
         working-directory: ios/App
@@ -137,14 +274,16 @@ jobs:
             -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath "$RUNNER_TEMP/Expal.xcarchive" \
-            archive
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_NAME"
 
       - name: Export App Store IPA
         working-directory: ios/App
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -160,7 +299,7 @@ jobs:
             <key>provisioningProfiles</key>
             <dict>
               <key>com.yourbrand.expal</key>
-              <string>EXPal App Store</string>
+              <string>$PROVISIONING_PROFILE_NAME</string>
             </dict>
             <key>uploadSymbols</key>
             <true/>
@@ -170,12 +309,9 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/Expal.xcarchive" \
             -exportPath "$RUNNER_TEMP/export" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/private_keys/AuthKey_${APPSTORE_KEY_ID}.p8 \
-            -authenticationKeyID "$APPSTORE_KEY_ID" \
-            -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID"
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
           ls -la "$RUNNER_TEMP/export"
+          test -f "$RUNNER_TEMP/export/App.ipa"
 
       - name: Clean up API key
         if: always()

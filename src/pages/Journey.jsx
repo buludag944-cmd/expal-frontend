@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { Card, CardContent } from "../components/ui/Card";
@@ -242,7 +242,7 @@ export default function Journey() {
 
   const API = getApiBaseUrl();
 
-  const loadResidency = () => fetchResidency(token).then(setResidency);
+  const loadResidency = useCallback(() => fetchResidency(token).then(setResidency), [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -259,7 +259,7 @@ export default function Journey() {
     if (tab === "Timeline") fetchTimeline(token).then(setTasks);
     if (tab === "Residency") loadResidency();
     if (tab === "Career" || tab === "Timeline") fetchScore(token).then(setScore);
-  }, [token, tab, user?.employmentStatus]);
+  }, [token, tab, user?.employmentStatus, loadResidency]);
 
   const toggle = async (task) => {
     if (taskBusyId) return;

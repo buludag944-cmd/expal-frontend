@@ -28,7 +28,7 @@ function formatDate(iso) {
 }
 
 export function MobileContentList({ config }) {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);

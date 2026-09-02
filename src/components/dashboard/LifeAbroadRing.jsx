@@ -2,9 +2,6 @@ import React from "react";
 
 export default function LifeAbroadRing({ score = 0, size = 72 }) {
   const pct = Math.min(100, Math.max(0, score));
-  const r = (size - 10) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
   const filled = Math.round((pct / 100) * 4);
 
   return (

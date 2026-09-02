@@ -131,10 +131,10 @@ export default function Onboarding() {
   }, [form.destinationCountry, token]);
 
   useEffect(() => {
-    if (isEuCitizen(form) && form.visaType !== EU_VISA) {
+    if (form.residencyStatus === "eu" && form.visaType !== EU_VISA) {
       setForm((f) => ({ ...f, visaType: EU_VISA }));
     }
-  }, [form.residencyStatus]);
+  }, [form.residencyStatus, form.visaType]);
 
   const cities = CITIES[form.destinationCountry] || CITIES.default;
 

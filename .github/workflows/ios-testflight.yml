@@ -80,8 +80,7 @@ jobs:
             -authenticationKeyID "$APPSTORE_KEY_ID" \
             -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID" \
             CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_IDENTITY="Apple Distribution"
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
 
       - name: Export App Store IPA
         working-directory: ios/App

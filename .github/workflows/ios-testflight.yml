@@ -83,8 +83,13 @@ jobs:
               }, f)
           print(f"Wrote {path}")
           PY
-          KEYCHAIN_SHA=$(security find-certificate -c "Apple Distribution" -Z ~/Library/Keychains/login.keychain-db 2>/dev/null | awk '/SHA-1 hash:/ {print $3; exit}')
+          KEYCHAIN_SHA=$(security find-identity -v -p codesigning | awk '/Apple Distribution/ {print tolower($2); exit}')
           echo "Keychain distribution SHA-1: $KEYCHAIN_SHA"
+          if [ -z "$KEYCHAIN_SHA" ]; then
+            echo "No Apple Distribution identity found in the CI keychain."
+            security find-identity -v -p codesigning || true
+            exit 1
+          fi
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILE_DIR"
           PP_PATH="$RUNNER_TEMP/ExpalAppStore.mobileprovision"
@@ -101,9 +106,15 @@ jobs:
               --skip_certificate_verification true \
               --skip_install true \
               --filename "$PP_PATH"
-            PROFILE_SHA=$(/usr/libexec/PlistBuddy -c "Print DeveloperCertificates:0" /dev/stdin <<< "$(security cms -D -i "$PP_PATH")" | openssl x509 -inform DER -noout -fingerprint -sha1 | tr -d ':' | cut -d= -f2 | tr '[:upper:]' '[:lower:]')
+            PROFILE_SHA=$(python3 - "$PP_PATH" <<'PY'
+          import hashlib, plistlib, subprocess, sys
+          raw = subprocess.check_output(["security", "cms", "-D", "-i", sys.argv[1]])
+          cert = plistlib.loads(raw)["DeveloperCertificates"][0]
+          print(hashlib.sha1(cert).hexdigest())
+          PY
+            )
             echo "Profile cert SHA-1: $PROFILE_SHA"
-            if [ "$PROFILE_SHA" = "$(echo "$KEYCHAIN_SHA" | tr '[:upper:]' '[:lower:]')" ]; then
+            if [ "$PROFILE_SHA" = "$KEYCHAIN_SHA" ]; then
               SELECTED_CERT="$CERT_ID"
               break
             fi

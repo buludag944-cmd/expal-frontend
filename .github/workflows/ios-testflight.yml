@@ -266,19 +266,34 @@ jobs:
 
       - name: Archive iOS app
         working-directory: ios/App
-        env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          # Manual signing lives on the App target in project.pbxproj only.
+          # Do not pass PROVISIONING_PROFILE_SPECIFIER / CODE_SIGN_* as global
+          # xcodebuild overrides — they apply to every target, including SPM
+          # packages (Firebase, GoogleUtilities, …) that cannot take a profile.
+          python3 - <<'PY'
+          import os, pathlib, re
+          path = pathlib.Path("App.xcodeproj/project.pbxproj")
+          text = path.read_text()
+          name = os.environ["PROVISIONING_PROFILE_NAME"]
+          new, n = re.subn(
+              r'(PROVISIONING_PROFILE_SPECIFIER = )"[^"]*";',
+              rf'\1"{name}";',
+              text,
+              count=1,
+          )
+          if n != 1:
+              raise SystemExit(f"Expected 1 PROVISIONING_PROFILE_SPECIFIER to update, found {n}")
+          path.write_text(new)
+          print(f"Set App target PROVISIONING_PROFILE_SPECIFIER to {name!r}")
+          PY
+
           xcodebuild -project App.xcodeproj \
             -scheme App \
             -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath "$RUNNER_TEMP/Expal.xcarchive" \
-            archive \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_NAME"
+            archive
 
       - name: Export App Store IPA
         working-directory: ios/App

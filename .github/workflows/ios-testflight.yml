@@ -90,7 +90,12 @@ jobs:
             --api_key_path "$RUNNER_TEMP/asc_api_key.json" \
             --force \
             --skip_certificate_verification true
-          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles"
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          PP="$(find "$GITHUB_WORKSPACE" -name 'AppStore_com.yourbrand.expal.mobileprovision' | head -1)"
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< "$(security cms -D -i "$PP")")
+          cp "$PP" "$PROFILE_DIR/$UUID.mobileprovision"
+          echo "Installed provisioning profile: EXPal App Store ($UUID)"
 
       - name: Archive iOS app
         working-directory: ios/App

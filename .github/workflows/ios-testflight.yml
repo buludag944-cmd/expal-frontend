@@ -12,12 +12,26 @@ concurrency:
 
 jobs:
   build-and-upload:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          set -euo pipefail
+          # App Store Connect requires the iOS 26 SDK (Xcode 26+).
+          XCODE_APP="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$XCODE_APP" ]; then
+            echo "No Xcode 26+ installed on runner:"
+            ls /Applications/Xcode*.app || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+          echo "Using $XCODE_APP"
 
       - name: Setup Node
         uses: actions/setup-node@v4

@@ -21,7 +21,7 @@ Repo → **Settings** → **Secrets and variables** → **Actions** → **New re
 | `APPLE_TEAM_ID` | 10-character Team ID |
 | `IOS_DIST_CERT_P12_BASE64` | Base64 of Apple Distribution `.p12` |
 | `IOS_DIST_CERT_PASSWORD` | `.p12` export password |
-| `IOS_PROVISION_PROFILE_BASE64` | Base64 of App Store `.mobileprovision` for `com.yourbrand.expal` |
+| `IOS_PROVISION_PROFILE_BASE64` | *(Optional)* Not needed — CI uses cloud signing (`-allowProvisioningUpdates`) |
 
 ### Firebase (bundled in the app)
 

@@ -64,6 +64,8 @@ html.mob-native-shell body {
   width: 100%;
   margin: 0;
   padding: 0;
+  /* Match app chrome so any sub-pixel gap above the tab bar isn't system gray */
+  background: #f8f7f5;
 }
 
 html.mob-native-shell #root {
@@ -250,6 +252,9 @@ html.mob-native-shell #root {
   touch-action: pan-y;
   padding: 12px 16px 16px;
   box-sizing: border-box;
+  background: var(--mob-bg);
+  display: flex;
+  flex-direction: column;
 }
 
 .mob-screen-footer {
@@ -392,26 +397,37 @@ html.mob-native-shell #root {
   z-index: 80;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
+  /* Do not scroll the backdrop — only the sheet body scrolls */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .mob-post-sheet {
   width: 100%;
-  max-height: min(88vh, 720px);
+  max-width: 720px;
+  max-height: min(85dvh, 720px);
   background: var(--mob-card);
   border-radius: 16px 16px 0 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
   /* Sheet covers the tab bar — needs its own bottom inset */
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: border-box;
 }
 
 .mob-post-sheet-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
   border-bottom: 0.5px solid var(--mob-border);
+  background: var(--mob-card);
+  z-index: 1;
 }
 
 .mob-post-sheet-title {
@@ -421,20 +437,71 @@ html.mob-native-shell #root {
 }
 
 .mob-post-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 16px;
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-sizing: border-box;
+}
+
+/* Forms inside the sheet should stretch naturally and scroll with the body */
+.mob-post-sheet-body > form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
 }
 
 .mob-post-sheet-body .mob-search-input {
   height: 44px;
+  flex-shrink: 0;
 }
 
 .mob-post-sheet-body textarea.mob-search-input {
   min-height: 96px;
+  height: auto;
   padding-top: 12px;
+}
+
+.mob-empty-state {
+  flex: 1 1 auto;
+  min-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 24px;
+  box-sizing: border-box;
+}
+
+.mob-empty-state-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--mob-text);
+}
+
+.mob-empty-state-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--mob-text-muted);
+  max-width: 280px;
+}
+
+/* Fills the scroll column so empty states aren't a bare gray slab above the tab bar */
+.mob-list-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .mob-member-profile-card {

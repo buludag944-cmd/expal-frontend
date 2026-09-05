@@ -9,6 +9,7 @@ import {
   MobileBadge,
   MobileFab,
   MobilePostSheet,
+  MobileEmptyState,
 } from "../../components/mobile/MobileShared";
 import CommentsSection from "../../components/CommentsSection";
 import { useLocalTabSwipe } from "../../hooks/useSwipeNav";
@@ -288,17 +289,19 @@ export default function MobileCommunity({ initialTab }) {
           </>
         }
       >
-        <div>
+        <div className="mob-list-pane">
           {postError && !showPost && (
             <p style={{ color: "#a32d2d", fontSize: 12, margin: "0 0 12px" }}>{postError}</p>
           )}
         {activeTab === "Events" && (
           <>
             <MobileSectionTitle>Upcoming near {user?.destinationCity || "you"}</MobileSectionTitle>
-            {filteredEvents.length === 0 && (
-              <p style={{ fontSize: 12, color: "var(--mob-text-muted)" }}>No events yet — tap ＋ to add one.</p>
-            )}
-            {filteredEvents.map((e) => {
+            {filteredEvents.length === 0 ? (
+              <MobileEmptyState title="No events yet">
+                Tap ＋ to add a meetup, workshop, or social near you.
+              </MobileEmptyState>
+            ) : (
+              filteredEvents.map((e) => {
               const { month, day } = formatEventDate(e.date);
               return (
                 <div key={e.id} className="mob-event-card mob-card">
@@ -335,7 +338,8 @@ export default function MobileCommunity({ initialTab }) {
                   </div>
                 </div>
               );
-            })}
+            })
+            )}
           </>
         )}
 
@@ -347,10 +351,12 @@ export default function MobileCommunity({ initialTab }) {
               </p>
             )}
             <MobileSectionTitle>Hot discussions</MobileSectionTitle>
-            {filteredThreads.length === 0 && (
-              <p style={{ fontSize: 12, color: "var(--mob-text-muted)" }}>No threads yet — tap ＋ to start one.</p>
-            )}
-            {filteredThreads.map((t) => {
+            {filteredThreads.length === 0 ? (
+              <MobileEmptyState title="No threads yet">
+                Tap ＋ to start a discussion in this forum.
+              </MobileEmptyState>
+            ) : (
+              filteredThreads.map((t) => {
               const author = [t.Author?.firstName, t.Author?.lastName].filter(Boolean).join(" ") || "Member";
               return (
                 <button
@@ -373,7 +379,8 @@ export default function MobileCommunity({ initialTab }) {
                   </div>
                 </button>
               );
-            })}
+            })
+            )}
           </>
         )}
 

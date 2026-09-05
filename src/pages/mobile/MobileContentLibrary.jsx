@@ -100,6 +100,7 @@ export function MobileContentList({ config }) {
   };
 
   return (
+    <div className="mob-page-stack">
     <MobileScreen
       title={config.title}
       backTo={config.backTo || "/"}
@@ -164,11 +165,12 @@ export function MobileContentList({ config }) {
           </button>
         ))}
       </div>
+    </MobileScreen>
 
       <MobileFab label={config.addLabel} onClick={() => setShowForm(true)} />
 
       <MobilePostSheet open={showForm} onClose={() => setShowForm(false)} title={config.addLabel}>
-        <form onSubmit={submitNew} className="mob-post-sheet-body">
+        <form onSubmit={submitNew}>
           <input
             className="mob-search-input"
             placeholder="Title"
@@ -201,7 +203,7 @@ export function MobileContentList({ config }) {
           </button>
         </form>
       </MobilePostSheet>
-    </MobileScreen>
+    </div>
   );
 }
 

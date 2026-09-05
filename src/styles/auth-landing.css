@@ -1,26 +1,49 @@
 @import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap");
 
 .auth-landing-root {
-  min-height: 100vh;
+  /* Fill the WebView; fixed layer paints gradient so scrolling never shows white */
+  min-height: 100%;
   min-height: 100dvh;
   width: 100%;
   font-family: "Inter", sans-serif;
-  background: linear-gradient(160deg, #e8473a 0%, #c93b55 40%, #7b4f8e 75%, #3b4fa0 100%);
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
-  overflow: hidden;
-  padding: max(2rem, env(safe-area-inset-top)) 1.5rem max(2rem, env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: max(1.25rem, env(safe-area-inset-top)) 1.25rem max(1.5rem, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.auth-landing-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(160deg, #e8473a 0%, #c93b55 40%, #7b4f8e 75%, #3b4fa0 100%);
+}
+
+/* Capacitor WebView / body — match gradient end so overscroll is never white */
+html.auth-native-shell,
+html.auth-native-shell body,
+body.auth-native-shell {
+  background: #3b4fa0 !important;
+  min-height: 100%;
+  min-height: 100dvh;
 }
 
 .auth-landing-blob {
-  position: absolute;
+  position: fixed;
   border-radius: 50%;
   filter: blur(80px);
   opacity: 0.18;
   pointer-events: none;
+  z-index: 0;
 }
 
 .auth-landing-blob-1 {
@@ -48,6 +71,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+  flex: 1 0 auto;
 }
 
 .auth-landing-logo-text {
@@ -70,12 +94,12 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
-  margin: 0.35rem 0 2rem;
+  margin: 0.35rem 0 1.25rem;
 }
 
 .auth-landing-circle {
-  width: 180px;
-  height: 180px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.12);
   border: 1.5px solid rgba(255, 255, 255, 0.2);
@@ -83,13 +107,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   backdrop-filter: blur(4px);
-  gap: 8px;
+  gap: 6px;
 }
 
 .auth-landing-circle-emoji {
-  font-size: 56px;
+  font-size: 44px;
   line-height: 1;
 }
 
@@ -171,6 +195,14 @@
 
 .auth-landing-btn-secondary:disabled {
   opacity: 0.7;
+}
+
+.auth-landing-email-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .auth-landing-divider {
@@ -267,6 +299,193 @@
   text-decoration: underline;
 }
 
+/* ——— Email / password forms ——— */
+.auth-email-block {
+  width: 100%;
+}
+
+.auth-email-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-email-name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.auth-landing-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 15px;
+  font-family: "Inter", sans-serif;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.auth-landing-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.auth-landing-input:focus {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.auth-landing-input:disabled {
+  opacity: 0.7;
+}
+
+.auth-landing-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.auth-landing-switch button {
+  min-height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Sora", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-landing-switch button.is-active {
+  background: rgba(255, 255, 255, 0.95);
+  color: #c93b55;
+}
+
+.auth-landing-forgot {
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+.auth-landing-text-link {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.auth-web-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 1.1rem 0;
+}
+
+.auth-web-divider-line {
+  flex: 1;
+  height: 1px;
+  background: #e8e4df;
+}
+
+.auth-web-divider-text {
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+.auth-web-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid #e2ddd6;
+  background: #faf8f6;
+  color: #1a1a1a;
+  font-size: 15px;
+  font-family: "Inter", sans-serif;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.auth-web-input::placeholder {
+  color: #999;
+}
+
+.auth-web-input:focus {
+  border-color: #c93b55;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(201, 59, 85, 0.12);
+}
+
+.auth-web-submit {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e8473a, #c93b55);
+  color: #fff;
+  font-family: "Sora", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-web-submit:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.auth-web-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f0ece7;
+}
+
+.auth-web-switch button {
+  min-height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #666;
+  font-family: "Sora", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-web-switch button.is-active {
+  background: #fff;
+  color: #c93b55;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.auth-web-forgot {
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+.auth-web-link {
+  color: #c93b55;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
 /* ——— Web (desktop) layout ——— */
 .auth-web-root {
   min-height: 100vh;
@@ -346,6 +565,20 @@
   padding: 12px 14px;
   font-size: 13px;
   font-weight: 500;
+}
+
+.auth-web-marketing {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f7f4f0;
+}
+
+.auth-web-marketing .auth-web-root {
+  min-height: auto;
+}
+
+.auth-web-marketing .public-site-header {
+  position: relative;
 }
 
 @media (max-width: 899px) {

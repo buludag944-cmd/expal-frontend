@@ -43,6 +43,12 @@ import MemberProfile from "./pages/MemberProfile";
 import Notifications from "./pages/Notifications";
 import HelpFaq from "./pages/HelpFaq";
 import SearchPage from "./pages/SearchPage";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
+import AuthPageShell from "./pages/auth/AuthPageShell";
+import BlogList from "./pages/public/BlogList";
+import BlogPostPage from "./pages/public/BlogPostPage";
 
 const API = getApiBaseUrl();
 
@@ -1168,9 +1174,32 @@ function MainApp() {
     return (
       <Router>
         <Routes>
-          <Route path="/verify/:token" element={<Navigate to="/" replace />} />
-          <Route path="/forgot" element={<Navigate to="/" replace />} />
-          <Route path="/reset/:token" element={<Navigate to="/" replace />} />
+          <Route
+            path="/verify/:token"
+            element={
+              <AuthPageShell>
+                <VerifyEmail />
+              </AuthPageShell>
+            }
+          />
+          <Route
+            path="/forgot"
+            element={
+              <AuthPageShell>
+                <ForgotPassword />
+              </AuthPageShell>
+            }
+          />
+          <Route
+            path="/reset/:token"
+            element={
+              <AuthPageShell>
+                <ResetPassword />
+              </AuthPageShell>
+            }
+          />
+          <Route path="/blog" element={<BlogList />} />
+          <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/child-safety" element={<ChildSafetyStandards />} />
           <Route path="/employment-support" element={<EmploymentSupport />} />
@@ -1184,9 +1213,32 @@ function MainApp() {
       <AppShell>
         <OnboardingGate>
           <Routes>
-            <Route path="/verify/:token" element={<Navigate to="/" replace />} />
-            <Route path="/forgot" element={<Navigate to="/" replace />} />
-            <Route path="/reset/:token" element={<Navigate to="/" replace />} />
+            <Route
+              path="/verify/:token"
+              element={
+                <AuthPageShell>
+                  <VerifyEmail />
+                </AuthPageShell>
+              }
+            />
+            <Route
+              path="/forgot"
+              element={
+                <AuthPageShell>
+                  <ForgotPassword />
+                </AuthPageShell>
+              }
+            />
+            <Route
+              path="/reset/:token"
+              element={
+                <AuthPageShell>
+                  <ResetPassword />
+                </AuthPageShell>
+              }
+            />
+            <Route path="/blog" element={<BlogList />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/child-safety" element={<ChildSafetyStandards />} />
             <Route path="/employment-support" element={<EmploymentSupport />} />

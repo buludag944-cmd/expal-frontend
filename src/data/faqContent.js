@@ -14,11 +14,15 @@ export const FAQ_CATEGORIES = [
       },
       {
         q: "How do I sign up or log in?",
-        a: "Tap Continue with Google on the welcome screen. EXPal uses Google Sign-In (via Firebase). There is no separate password — your Google account is your login. On Android, sign-in runs natively inside the app.",
+        a: "On the welcome screen you can Continue with Google (Firebase), or use Sign in / Create account with email and password. Google accounts must keep using Google — they do not have a separate password. Email signups may need to verify via the link we send before logging in.",
       },
       {
         q: "Why does Google sign-in fail on my phone?",
         a: "Common fixes: update the app from Google Play, update Google Play services, check Wi‑Fi or mobile data, and disable VPN. If you see a developer or SHA-1 error, install the latest Play Store build — older sideloaded builds may not be authorized. Still stuck? Profile → Contact founder.",
+      },
+      {
+        q: "Is there a blog I can read without signing up?",
+        a: "Yes. On the web site, open Blog from the top navigation or go to /blog. Articles are public — no login required. Sign in only when you want the full app (housing, journey, community).",
       },
       {
         q: "Do I need to complete onboarding?",
@@ -272,7 +276,7 @@ export const FAQ_CATEGORIES = [
       },
       {
         q: "How do I log out?",
-        a: "Profile → scroll down → Log out. Push registration is cleared on logout. Sign in again anytime with Google.",
+        a: "Profile → scroll down → Log out. Push registration is cleared on logout. Sign in again with Google or your email and password.",
       },
     ],
   },

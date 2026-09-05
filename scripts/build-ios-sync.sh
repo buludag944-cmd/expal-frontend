@@ -9,6 +9,13 @@ set -a
 # shellcheck disable=SC1091
 [[ -f .env.netlify ]] && source .env.netlify
 set +a
+# Always force production API for device builds (phones cannot reach localhost).
+export REACT_APP_API_URL="${REACT_APP_API_URL:-https://expalapp-1.onrender.com}"
+if [[ "$REACT_APP_API_URL" == *"localhost"* ]] || [[ "$REACT_APP_API_URL" == *"127.0.0.1"* ]]; then
+  echo "WARNING: REACT_APP_API_URL was local — overriding to production for iOS bundle"
+  export REACT_APP_API_URL="https://expalapp-1.onrender.com"
+fi
+echo "    REACT_APP_API_URL=$REACT_APP_API_URL"
 PUBLIC_URL=. npm run build
 
 echo "==> 2/3 Verify iOS Firebase (Google Sign-In)..."

@@ -33,10 +33,12 @@ Repo → **Settings** → **Secrets and variables** → **Actions** → **New re
 | `REACT_APP_FIREBASE_PROJECT_ID` | `expalapp-a6422` |
 | `REACT_APP_FIREBASE_APP_ID` | Firebase web app ID |
 
+The workflow also sets **`REACT_APP_API_URL=https://expalapp-1.onrender.com`** at build time (required — without it the app calls localhost and Google login fails on device).
+
 ## Run
 
 **Actions** → **iOS TestFlight** → **Run workflow**
 
-Or: `git tag ios-1.3.6 && git push origin ios-1.3.6`
+Or: `git tag ios-1.3.7 && git push origin ios-1.3.7`
 
 Bump `CURRENT_PROJECT_VERSION` in `ios/App/App.xcodeproj/project.pbxproj` before each upload.

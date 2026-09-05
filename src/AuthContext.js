@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { getApiBaseUrl } from "./apiConfig";
+import { getApiBaseUrl, PRODUCTION_API_URL } from "./apiConfig";
 import { syncPushTokenIfGranted, unregisterPushDevice } from "./lib/pushNotifications";
+import { isNativeApp } from "./lib/platform";
 
 const AuthContext = createContext();
 const API = getApiBaseUrl();
@@ -36,9 +37,14 @@ const BACKEND_UNREACHABLE_LOCAL =
 const BACKEND_UNREACHABLE_REMOTE = (apiBase) =>
   `API not reachable. On Render free tier the server may be asleep — wait up to 60 seconds and try again. If it keeps failing, check ${apiBase.replace(/\/$/, "")}/health in your browser.`;
 
-const NETWORK_ERROR = isLocalApiBase(API)
-  ? BACKEND_UNREACHABLE_LOCAL
-  : BACKEND_UNREACHABLE_REMOTE(API);
+const BACKEND_UNREACHABLE_NATIVE =
+  `Could not reach EXPal servers (${PRODUCTION_API_URL}). Check your internet connection, or wait a minute if the API is waking up, then try again.`;
+
+const NETWORK_ERROR = isNativeApp()
+  ? BACKEND_UNREACHABLE_NATIVE
+  : isLocalApiBase(API)
+    ? BACKEND_UNREACHABLE_LOCAL
+    : BACKEND_UNREACHABLE_REMOTE(API);
 
 async function parseJsonSafe(res) {
   try {
@@ -165,7 +171,7 @@ export const AuthProvider = ({ children }) => {
         }
         if (res.status === 401) {
           clearSession(
-            "Your session expired. Sign in with Google again — your data is saved on the server if you use the same Google account."
+            "Your session expired. Sign in again with Google or email — your data is saved on the server if you use the same account."
           );
         }
       })
@@ -194,9 +200,11 @@ export const AuthProvider = ({ children }) => {
 
   const loginWithGoogle = async (idToken) => {
     const url = `${API}/api/auth/google`;
-    const unreachable = isLocalApiBase(API)
-      ? BACKEND_UNREACHABLE_LOCAL
-      : BACKEND_UNREACHABLE_REMOTE(API);
+    const unreachable = isNativeApp()
+      ? BACKEND_UNREACHABLE_NATIVE
+      : isLocalApiBase(API)
+        ? BACKEND_UNREACHABLE_LOCAL
+        : BACKEND_UNREACHABLE_REMOTE(API);
 
     const postOnce = async () => {
       const res = await fetch(url, {

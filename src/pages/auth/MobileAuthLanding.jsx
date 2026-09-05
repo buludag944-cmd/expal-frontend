@@ -1,13 +1,24 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../AuthContext";
 import { useGoogleAuthAction } from "./useGoogleAuthAction";
+import EmailAuthForms from "./EmailAuthForms";
 import "../../styles/auth-landing.css";
 
-/** Mobile sign-in — same layout as 1.2.7 / 1.2.9 (Google only). */
+/** Mobile sign-in — Google + email create account / sign in. */
 export default function MobileAuthLanding() {
   const { authNotice } = useAuth();
   const { busy, error, signInWithGoogle, googleConfigured } = useGoogleAuthAction();
+  const [emailMode, setEmailMode] = useState(null); // null | "signin" | "signup"
+
+  useEffect(() => {
+    document.documentElement.classList.add("auth-native-shell");
+    document.body.classList.add("auth-native-shell");
+    return () => {
+      document.documentElement.classList.remove("auth-native-shell");
+      document.body.classList.remove("auth-native-shell");
+    };
+  }, []);
 
   return (
     <div className="auth-landing-root">
@@ -53,14 +64,53 @@ export default function MobileAuthLanding() {
         </button>
 
         {!googleConfigured && (
-          <p className="auth-landing-footer" style={{ color: "#a32d2d", marginTop: 12 }}>
-            Google sign-in is not configured in this build. Install the latest version from Google Play.
+          <p className="auth-landing-footer" style={{ color: "#ffc9c9", marginTop: 12 }}>
+            Google sign-in is not configured in this build. Install the latest TestFlight or Play
+            Store version.
           </p>
         )}
 
+        {emailMode == null ? (
+          <div className="auth-landing-email-actions">
+            <button
+              type="button"
+              className="auth-landing-btn-secondary"
+              onClick={() => setEmailMode("signin")}
+            >
+              Sign in with email
+            </button>
+            <button
+              type="button"
+              className="auth-landing-btn-secondary"
+              onClick={() => setEmailMode("signup")}
+            >
+              Create account
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="auth-landing-divider">
+              <span className="auth-landing-divider-line" />
+              <span className="auth-landing-divider-text">
+                {emailMode === "signup" ? "create account" : "email sign in"}
+              </span>
+              <span className="auth-landing-divider-line" />
+            </div>
+            <EmailAuthForms key={emailMode} variant="mobile" initialMode={emailMode} />
+            <button
+              type="button"
+              className="auth-landing-text-link"
+              style={{ marginTop: 8, background: "none", border: "none", cursor: "pointer" }}
+              onClick={() => setEmailMode(null)}
+            >
+              Back
+            </button>
+          </>
+        )}
+
         <p className="auth-landing-footer">
-          By continuing you agree to our{" "}
-          <Link to="/privacy">Privacy Policy</Link>. Expal is free — always.
+          By continuing you agree to our <Link to="/privacy">Privacy Policy</Link>. Expal is free —
+          always.
         </p>
       </div>
     </div>

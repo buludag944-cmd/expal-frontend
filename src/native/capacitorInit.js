@@ -13,14 +13,16 @@ export async function initCapacitorNative() {
   ]);
 
   try {
-    const isIOS = Capacitor.getPlatform() === "ios";
-    await StatusBar.setOverlaysWebView({ overlay: false });
-    await StatusBar.setStyle({ style: Style.Light });
-    if (!isIOS) {
+    // Option A: WebView is edge-to-edge; CSS env(safe-area-inset-*) owns insets.
+    // overlay:false would inset the WebView natively AND double with CSS padding.
+    await StatusBar.setOverlaysWebView({ overlay: true });
+    // Dark icons — most screens use light chrome; readable on home gradient too
+    await StatusBar.setStyle({ style: Style.Dark });
+    if (Capacitor.getPlatform() !== "ios") {
       await StatusBar.setBackgroundColor({ color: "#F25C54" });
     }
   } catch {
-    /* iOS may ignore background / overlay APIs */
+    /* iOS may ignore background / overlay APIs on older plugin builds */
   }
 
   App.addListener("backButton", ({ canGoBack }) => {

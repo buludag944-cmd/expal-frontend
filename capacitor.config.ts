@@ -18,7 +18,7 @@ const config: CapacitorConfig = {
       showSpinner: false,
     },
     StatusBar: {
-      style: "LIGHT",
+      style: "DARK",
       backgroundColor: "#F25C54",
     },
     FirebaseMessaging: {
@@ -33,7 +33,9 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
   },
   ios: {
-    contentInset: "automatic",
+    // "automatic" makes WKWebView scroll the whole page (headers + tab bar move).
+    // Handle safe areas in CSS only.
+    contentInset: "never",
   },
 };
 

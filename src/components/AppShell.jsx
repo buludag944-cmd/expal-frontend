@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -76,6 +76,12 @@ function NativeShell({ children }) {
   ]
     .filter(Boolean)
     .join(" ");
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("mob-native-shell");
+    return () => root.classList.remove("mob-native-shell");
+  }, []);
 
   return (
     <div

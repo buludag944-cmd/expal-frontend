@@ -1126,6 +1126,7 @@ function OnboardingGate({ children }) {
   const { user, authReady } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const native = isNativeApp();
 
   useEffect(() => {
     if (!authReady || !user?.onboardingComplete) return;
@@ -1134,16 +1135,28 @@ function OnboardingGate({ children }) {
     }
   }, [user, authReady, location.pathname, navigate]);
 
+  const banner =
+    user && !user.onboardingComplete && location.pathname !== "/onboarding" ? (
+      <div className="onboard-banner">
+        <p>Complete your profile to unlock personalised visa guides and timeline.</p>
+        <button type="button" onClick={() => navigate("/onboarding")}>
+          Resume setup →
+        </button>
+      </div>
+    ) : null;
+
+  if (native) {
+    return (
+      <div className="mob-page-stack">
+        {banner}
+        {children}
+      </div>
+    );
+  }
+
   return (
     <>
-      {user && !user.onboardingComplete && location.pathname !== "/onboarding" && (
-        <div className="onboard-banner">
-          <p>Complete your profile to unlock personalised visa guides and timeline.</p>
-          <button type="button" onClick={() => navigate("/onboarding")}>
-            Resume setup →
-          </button>
-        </div>
-      )}
+      {banner}
       {children}
     </>
   );

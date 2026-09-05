@@ -75,9 +75,7 @@ export default function AiChatWidget() {
         className={cn(
           "fixed z-[60] flex h-14 w-14 items-center justify-center rounded-full shadow-lg",
           "bg-primary text-white hover:opacity-90 transition-opacity",
-          native
-            ? "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4"
-            : "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-6 md:right-6"
+          native ? "mob-chat-fab right-4" : "bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 md:bottom-6 md:right-6"
         )}
         aria-label={open ? "Close assistant" : "Open Expal assistant"}
       >
@@ -88,8 +86,9 @@ export default function AiChatWidget() {
         <div
           className={cn(
             "fixed z-[59] flex flex-col bg-card border border-border shadow-xl rounded-2xl overflow-hidden",
-            "bottom-[calc(9.5rem+env(safe-area-inset-bottom))] right-4 left-4 h-[min(420px,55vh)]",
-            "md:left-auto md:w-[380px] md:bottom-24"
+            "right-4 left-4 h-[min(420px,55vh)]",
+            native ? "mob-chat-panel" : "bottom-[calc(9.5rem+env(safe-area-inset-bottom))] md:left-auto md:w-[380px] md:bottom-24",
+            !native && "md:left-auto md:w-[380px] md:bottom-24"
           )}
         >
           <div className="px-4 py-3 border-b border-border bg-primary/10">

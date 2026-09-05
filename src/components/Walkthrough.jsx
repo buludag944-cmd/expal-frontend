@@ -168,7 +168,7 @@ export default function Walkthrough({ enabled }) {
       position: "fixed",
       left: 12,
       right: 12,
-      bottom: native ? "calc(72px + env(safe-area-inset-bottom))" : 24,
+      bottom: native ? undefined : 24,
       zIndex: 80,
       background: "var(--mob-card, #fff)",
       color: "var(--mob-text, #1a1814)",
@@ -202,6 +202,7 @@ export default function Walkthrough({ enabled }) {
         role="dialog"
         aria-modal="false"
         aria-label="App walkthrough"
+        className={native ? "mob-walkthrough-panel" : undefined}
         style={panelStyle}
         data-no-route-swipe
       >

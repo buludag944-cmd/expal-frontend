@@ -65,7 +65,7 @@ export function MobileScreenHeader({ title, backTo, onBack, action, count }) {
   );
 }
 
-/** Fixed top chrome (header stays visible) + independent scroll body. */
+/** Fixed top chrome (outside scroll) + independent scroll body. Safe-area top lives on chrome CSS. */
 export function MobileScreen({
   title,
   backTo,

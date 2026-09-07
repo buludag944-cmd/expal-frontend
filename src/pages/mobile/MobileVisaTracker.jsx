@@ -336,7 +336,11 @@ export default function MobileVisaTracker() {
             ))}
           </MobileCard>
 
-          <button type="button" className="mob-btn-primary mob-doc-add-row" style={{ width: "100%", minHeight: 44, marginTop: 12 }} onClick={() => setShowDocForm(true)}>
+          <button
+            type="button"
+            className="mob-btn-primary mob-doc-add-row"
+            onClick={() => setShowDocForm(true)}
+          >
             ＋ Add document
           </button>
         </>

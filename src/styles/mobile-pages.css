@@ -277,7 +277,8 @@
   border: 1px solid #eee;
   border-radius: 12px;
   padding: 12px;
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1.35;
   resize: vertical;
   background: #fff5f7;
 }

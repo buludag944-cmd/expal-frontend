@@ -473,17 +473,29 @@ html.mob-native-shell #root {
 }
 
 .mob-post-sheet-body textarea.mob-search-input {
-  min-height: 96px;
+  min-height: 88px;
   height: auto;
   padding-top: 12px;
+  padding-bottom: 12px;
+  resize: vertical;
+}
+
+.mob-post-sheet-body textarea.mob-sheet-textarea {
+  min-height: 88px;
 }
 
 .mob-post-sheet-footer {
   flex: 0 0 auto;
+  /* Safe area only when keyboard is closed; keyboard lift handles inset via JS */
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 0.5px solid var(--mob-border);
   background: #ffffff;
   box-sizing: border-box;
+}
+
+html.mob-sheet-open.mob-sheet-keyboard .mob-post-sheet-footer {
+  /* Sheet already sits in the visual viewport above the keyboard */
+  padding-bottom: 12px;
 }
 
 .mob-post-sheet-footer .mob-btn-primary {
@@ -618,13 +630,16 @@ html.mob-sheet-open .mob-walkthrough-panel {
 
 .mob-search-input {
   width: 100%;
-  height: 38px;
+  height: 44px;
   background: var(--mob-bg);
   border: 0.5px solid var(--mob-border);
   border-radius: 8px;
   padding: 0 12px;
-  font-size: 12px;
+  /* ≥16px prevents iOS WKWebView from auto-zooming on focus */
+  font-size: 16px;
+  line-height: 1.25;
   color: var(--mob-text);
+  box-sizing: border-box;
 }
 
 .mob-home-search {
@@ -773,9 +788,20 @@ html.mob-sheet-open .mob-walkthrough-panel {
 }
 
 .mob-doc-add-row {
+  /* Full width, content height — never flex-grow in .mob-screen-scroll column */
+  flex: 0 0 auto !important;
+  align-self: stretch;
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  margin-top: 12px;
+  margin-bottom: 0;
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
 }
 
 .mob-section-title {
@@ -1586,7 +1612,9 @@ html.mob-sheet-open .mob-walkthrough-panel {
 }
 
 .mob-btn-primary {
-  flex: 1;
+  /* Do NOT use flex:1 here — .mob-screen-scroll is a column flex container on native,
+     and iOS WKWebView stretches flex:1 buttons to fill leftover viewport height. */
+  flex: 0 0 auto;
   height: 34px;
   background: var(--mob-purple-light);
   border: 0.5px solid var(--mob-purple-border);
@@ -1598,7 +1626,7 @@ html.mob-sheet-open .mob-walkthrough-panel {
 }
 
 .mob-btn-secondary {
-  flex: 1;
+  flex: 0 0 auto;
   height: 34px;
   background: var(--mob-card);
   border: 0.5px solid var(--mob-border);
@@ -1607,6 +1635,15 @@ html.mob-sheet-open .mob-walkthrough-panel {
   font-weight: 500;
   color: var(--mob-text-secondary);
   cursor: pointer;
+}
+
+/* Horizontal action rows still share width equally */
+.mob-ref-actions > .mob-btn-primary,
+.mob-ref-actions > .mob-btn-secondary,
+.mob-content-actions > .mob-btn-primary,
+.mob-content-actions > .mob-btn-secondary {
+  flex: 1 1 0%;
+  min-width: 0;
 }
 
 /* ── Visa tracker ── */
@@ -2305,11 +2342,26 @@ html.mob-sheet-open .mob-walkthrough-panel {
   -webkit-text-size-adjust: 100%;
 }
 
-.mob-platform-ios .mob-search-input,
-.mob-platform-ios input.mob-search-input,
-.mob-platform-ios textarea.mob-search-input,
-.mob-platform-ios select.mob-search-input {
-  font-size: 16px;
+/*
+ * iOS auto-zoom: any focused control under 16px triggers page zoom.
+ * Sheets portal to document.body (outside .mob-platform-ios), so enforce
+ * 16px on all native-shell focusables — not only descendants of the shell.
+ */
+html.mob-native-shell input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]),
+html.mob-native-shell textarea,
+html.mob-native-shell select,
+html.mob-native-shell [contenteditable="true"],
+.mob-post-sheet input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]),
+.mob-post-sheet textarea,
+.mob-post-sheet select,
+.mob-app .mob-search-input,
+.mob-app input.mob-search-input,
+.mob-app textarea.mob-search-input,
+.mob-app select.mob-search-input,
+.mob-app .form-input,
+.mob-app textarea.form-input,
+.mob-app .mob-compose textarea {
+  font-size: 16px !important;
 }
 
 /* Center phone-width column on iPad / tablet */

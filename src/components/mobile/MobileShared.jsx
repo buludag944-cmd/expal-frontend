@@ -125,11 +125,15 @@ export function MobileFab({ onClick, label = "Post", visible = true, side = "lef
  * Shared bottom sheet for create/edit forms (iOS WebKit–safe).
  * Portaled to document.body. Structure:
  *   header (fixed) → scrollable body → optional pinned footer (Save/Post).
- * Prefer putting the primary submit in `footer` so it stays visible on iPhone.
+ *
+ * On iOS the keyboard overlays the layout viewport without resizing it.
+ * We lift the sheet with visualViewport so fields stay above the keyboard.
  */
 export function MobilePostSheet({ open, onClose, title, children, footer = null }) {
+  const backdropRef = useRef(null);
   const sheetRef = useRef(null);
   const bodyRef = useRef(null);
+  const focusedRef = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -137,15 +141,69 @@ export function MobilePostSheet({ open, onClose, title, children, footer = null 
     const root = document.documentElement;
     root.classList.add("mob-sheet-open");
     const sheetEl = sheetRef.current;
+    const backdropEl = backdropRef.current;
 
-    const syncHeight = () => {
-      const sheet = sheetRef.current;
-      if (!sheet) return;
+    const keyboardBottomInset = () => {
       const vv = window.visualViewport;
+      if (!vv) return 0;
+      // Distance from layout viewport bottom to visual viewport bottom (= keyboard)
+      return Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    };
+
+    const syncToVisualViewport = () => {
+      const sheet = sheetRef.current;
+      const backdrop = backdropRef.current;
+      const vv = window.visualViewport;
+      if (!sheet) return;
+
+      const inset = keyboardBottomInset();
       const viewH = vv?.height ?? window.innerHeight;
-      // Cap sheet to 85% of the *visible* viewport (tracks keyboard on iOS)
-      const max = Math.min(Math.round(viewH * 0.85), 720);
+      const max = Math.min(Math.round(viewH * (inset > 40 ? 0.95 : 0.85)), 720);
+
+      // Resize backdrop to the *visible* viewport (above the keyboard on iOS).
+      // Sheet stays bottom:0 inside that box — no double-lift.
+      if (backdrop && vv) {
+        backdrop.style.top = `${Math.round(vv.offsetTop)}px`;
+        backdrop.style.height = `${Math.round(vv.height)}px`;
+        backdrop.style.bottom = "auto";
+        backdrop.style.left = "0";
+        backdrop.style.right = "0";
+      }
+
+      sheet.style.bottom = "0px";
       sheet.style.maxHeight = `${max}px`;
+      root.classList.toggle("mob-sheet-keyboard", inset > 40);
+    };
+
+    const scrollFieldIntoBody = (field) => {
+      const body = bodyRef.current;
+      if (!body || !field) return;
+
+      // Prefer scrolling the sheet body (not the document / WKWebView)
+      const bodyRect = body.getBoundingClientRect();
+      const fieldRect = field.getBoundingClientRect();
+      const pad = 28;
+
+      if (fieldRect.bottom > bodyRect.bottom - pad) {
+        body.scrollTop += fieldRect.bottom - bodyRect.bottom + pad;
+      } else if (fieldRect.top < bodyRect.top + pad) {
+        body.scrollTop -= bodyRect.top - fieldRect.top + pad;
+      }
+
+      // Fallback for edge cases (select pickers, slow layout)
+      try {
+        field.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+      } catch {
+        /* older WebKit */
+      }
+    };
+
+    const ensureFocusedVisible = () => {
+      syncToVisualViewport();
+      const field = focusedRef.current;
+      if (field && bodyRef.current?.contains(field)) {
+        scrollFieldIntoBody(field);
+      }
     };
 
     const onFocusIn = (e) => {
@@ -153,33 +211,58 @@ export function MobilePostSheet({ open, onClose, title, children, footer = null 
       if (!(t instanceof HTMLElement)) return;
       if (!bodyRef.current?.contains(t)) return;
       if (!/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-      window.setTimeout(() => {
-        syncHeight();
-        t.scrollIntoView({ block: "center", behavior: "smooth" });
-      }, 250);
+      focusedRef.current = t;
+      // iOS keyboard animation ~250–350ms; sync before and after
+      syncToVisualViewport();
+      window.setTimeout(ensureFocusedVisible, 50);
+      window.setTimeout(ensureFocusedVisible, 300);
+      window.setTimeout(ensureFocusedVisible, 450);
     };
 
-    syncHeight();
+    const onFocusOut = (e) => {
+      if (focusedRef.current === e.target) {
+        focusedRef.current = null;
+      }
+      // Reset lift after keyboard dismisses
+      window.setTimeout(syncToVisualViewport, 100);
+      window.setTimeout(syncToVisualViewport, 350);
+    };
+
+    syncToVisualViewport();
     const vv = window.visualViewport;
-    vv?.addEventListener("resize", syncHeight);
-    vv?.addEventListener("scroll", syncHeight);
-    window.addEventListener("resize", syncHeight);
+    vv?.addEventListener("resize", ensureFocusedVisible);
+    vv?.addEventListener("scroll", syncToVisualViewport);
+    window.addEventListener("resize", syncToVisualViewport);
     document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
 
     return () => {
       root.classList.remove("mob-sheet-open");
-      vv?.removeEventListener("resize", syncHeight);
-      vv?.removeEventListener("scroll", syncHeight);
-      window.removeEventListener("resize", syncHeight);
+      root.classList.remove("mob-sheet-keyboard");
+      vv?.removeEventListener("resize", ensureFocusedVisible);
+      vv?.removeEventListener("scroll", syncToVisualViewport);
+      window.removeEventListener("resize", syncToVisualViewport);
       document.removeEventListener("focusin", onFocusIn);
-      if (sheetEl) sheetEl.style.maxHeight = "";
+      document.removeEventListener("focusout", onFocusOut);
+      focusedRef.current = null;
+      if (sheetEl) {
+        sheetEl.style.maxHeight = "";
+        sheetEl.style.bottom = "";
+      }
+      if (backdropEl) {
+        backdropEl.style.top = "";
+        backdropEl.style.height = "";
+        backdropEl.style.bottom = "";
+        backdropEl.style.left = "";
+        backdropEl.style.right = "";
+      }
     };
   }, [open]);
 
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="mob-post-sheet-backdrop" onClick={onClose} role="presentation">
+    <div ref={backdropRef} className="mob-post-sheet-backdrop" onClick={onClose} role="presentation">
       <div
         ref={sheetRef}
         className="mob-post-sheet"

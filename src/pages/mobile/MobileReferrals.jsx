@@ -150,13 +150,38 @@ export default function MobileReferrals({
         }
       >
         <form id="mob-referral-form" onSubmit={handleSubmit}>
-          <p style={{ fontSize: 12, color: "var(--mob-text-muted)", margin: 0, lineHeight: 1.45 }}>
+          <p style={{ fontSize: 13, color: "var(--mob-text-muted)", margin: 0, lineHeight: 1.45 }}>
             Publish to the community so members can comment and help.
           </p>
-          <input className="mob-search-input" placeholder="Your name or headline" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          <input className="mob-search-input" placeholder="Role you're looking for" value={form.profession} onChange={(e) => setForm({ ...form, profession: e.target.value })} required />
-          <input className="mob-search-input" placeholder="Company or industry (optional)" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
-          <textarea className="mob-search-input" placeholder="What help are you looking for?" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} required />
+          <input
+            className="mob-search-input"
+            placeholder="Your name or headline"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+            autoComplete="name"
+          />
+          <input
+            className="mob-search-input"
+            placeholder="Role you're looking for"
+            value={form.profession}
+            onChange={(e) => setForm({ ...form, profession: e.target.value })}
+            required
+          />
+          <input
+            className="mob-search-input"
+            placeholder="Company or industry (optional)"
+            value={form.company}
+            onChange={(e) => setForm({ ...form, company: e.target.value })}
+          />
+          <textarea
+            className="mob-search-input mob-sheet-textarea"
+            placeholder="What help are you looking for?"
+            value={form.message}
+            onChange={(e) => setForm({ ...form, message: e.target.value })}
+            required
+            rows={4}
+          />
         </form>
       </MobilePostSheet>
     </div>

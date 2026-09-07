@@ -136,6 +136,7 @@ export function MobilePostSheet({ open, onClose, title, children, footer = null 
 
     const root = document.documentElement;
     root.classList.add("mob-sheet-open");
+    const sheetEl = sheetRef.current;
 
     const syncHeight = () => {
       const sheet = sheetRef.current;
@@ -171,7 +172,7 @@ export function MobilePostSheet({ open, onClose, title, children, footer = null 
       vv?.removeEventListener("scroll", syncHeight);
       window.removeEventListener("resize", syncHeight);
       document.removeEventListener("focusin", onFocusIn);
-      if (sheetRef.current) sheetRef.current.style.maxHeight = "";
+      if (sheetEl) sheetEl.style.maxHeight = "";
     };
   }, [open]);
 

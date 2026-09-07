@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { sendAssistantMessage } from "../lib/journeyApi";
 import Button from "./ui/Button";
@@ -9,6 +10,11 @@ import { isNativeApp } from "../lib/platform";
 
 const WELCOME =
   "Hi! I'm your **free Expal visa guide** for Ireland — CSEP, General Work Permit, and EU Passport. Ask about IRP, PPS, bank accounts, housing, or say **my steps**.";
+
+/** Routes with their own composer / bottom chrome — hide FAB so it does not cover Send. */
+function shouldHideAssistant(pathname) {
+  return pathname === "/messages" || pathname.startsWith("/messages/");
+}
 
 function renderMarkdownLite(text) {
   return String(text)
@@ -25,11 +31,17 @@ function toApiHistory(messages) {
 
 export default function AiChatWidget() {
   const { token, user } = useAuth();
+  const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState([{ role: "assistant", text: WELCOME }]);
   const scrollRef = useRef(null);
+  const hidden = shouldHideAssistant(pathname);
+
+  useEffect(() => {
+    if (hidden) setOpen(false);
+  }, [hidden]);
 
   useEffect(() => {
     if (open && scrollRef.current) {
@@ -66,6 +78,8 @@ export default function AiChatWidget() {
     : "Free visa guide · Ireland";
 
   const native = isNativeApp();
+
+  if (hidden) return null;
 
   return (
     <>

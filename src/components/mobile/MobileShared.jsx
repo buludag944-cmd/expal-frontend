@@ -122,23 +122,27 @@ export function MobileFab({ onClick, label = "Post", visible = true, side = "lef
 }
 
 /**
- * Shared bottom sheet for create/edit forms.
- * Portaled to document.body so it never participates in page flex/scroll trees.
- * Structure: fixed header (title + close) → scrollable body (form + submit).
+ * Shared bottom sheet for create/edit forms (iOS WebKit–safe).
+ * Portaled to document.body. Structure:
+ *   header (fixed) → scrollable body → optional pinned footer (Save/Post).
+ * Prefer putting the primary submit in `footer` so it stays visible on iPhone.
  */
-export function MobilePostSheet({ open, onClose, title, children }) {
+export function MobilePostSheet({ open, onClose, title, children, footer = null }) {
   const sheetRef = useRef(null);
   const bodyRef = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
 
-    const syncMaxHeight = () => {
+    const root = document.documentElement;
+    root.classList.add("mob-sheet-open");
+
+    const syncHeight = () => {
       const sheet = sheetRef.current;
       if (!sheet) return;
       const vv = window.visualViewport;
       const viewH = vv?.height ?? window.innerHeight;
-      // Leave a peek of the backdrop so it still reads as a sheet, not fullscreen
+      // Cap sheet to 85% of the *visible* viewport (tracks keyboard on iOS)
       const max = Math.min(Math.round(viewH * 0.85), 720);
       sheet.style.maxHeight = `${max}px`;
     };
@@ -148,29 +152,26 @@ export function MobilePostSheet({ open, onClose, title, children }) {
       if (!(t instanceof HTMLElement)) return;
       if (!bodyRef.current?.contains(t)) return;
       if (!/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-      // After keyboard animates, bring the field (and nearby submit) into view
       window.setTimeout(() => {
+        syncHeight();
         t.scrollIntoView({ block: "center", behavior: "smooth" });
-        syncMaxHeight();
-      }, 120);
+      }, 250);
     };
 
-    syncMaxHeight();
+    syncHeight();
     const vv = window.visualViewport;
-    vv?.addEventListener("resize", syncMaxHeight);
-    vv?.addEventListener("scroll", syncMaxHeight);
-    window.addEventListener("resize", syncMaxHeight);
+    vv?.addEventListener("resize", syncHeight);
+    vv?.addEventListener("scroll", syncHeight);
+    window.addEventListener("resize", syncHeight);
     document.addEventListener("focusin", onFocusIn);
 
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
     return () => {
-      vv?.removeEventListener("resize", syncMaxHeight);
-      vv?.removeEventListener("scroll", syncMaxHeight);
-      window.removeEventListener("resize", syncMaxHeight);
+      root.classList.remove("mob-sheet-open");
+      vv?.removeEventListener("resize", syncHeight);
+      vv?.removeEventListener("scroll", syncHeight);
+      window.removeEventListener("resize", syncHeight);
       document.removeEventListener("focusin", onFocusIn);
-      document.body.style.overflow = prevOverflow;
+      if (sheetRef.current) sheetRef.current.style.maxHeight = "";
     };
   }, [open]);
 
@@ -195,8 +196,10 @@ export function MobilePostSheet({ open, onClose, title, children }) {
         <div ref={bodyRef} className="mob-post-sheet-body">
           {children}
         </div>
+        {footer ? <div className="mob-post-sheet-footer">{footer}</div> : null}
       </div>
     </div>,
     document.body
   );
 }
+

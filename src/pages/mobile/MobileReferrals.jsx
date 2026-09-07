@@ -143,8 +143,13 @@ export default function MobileReferrals({
         open={showForm}
         onClose={toggleForm}
         title={editingId ? "Edit your post" : "Post a referral request"}
+        footer={
+          <button type="submit" form="mob-referral-form" className="mob-btn-primary">
+            {editingId != null ? "Save changes" : "Publish post"}
+          </button>
+        }
       >
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <form id="mob-referral-form" onSubmit={handleSubmit}>
           <p style={{ fontSize: 12, color: "var(--mob-text-muted)", margin: 0, lineHeight: 1.45 }}>
             Publish to the community so members can comment and help.
           </p>
@@ -152,9 +157,6 @@ export default function MobileReferrals({
           <input className="mob-search-input" placeholder="Role you're looking for" value={form.profession} onChange={(e) => setForm({ ...form, profession: e.target.value })} required />
           <input className="mob-search-input" placeholder="Company or industry (optional)" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
           <textarea className="mob-search-input" placeholder="What help are you looking for?" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} required />
-          <button type="submit" className="mob-btn-primary" style={{ height: 44 }}>
-            {editingId != null ? "Save changes" : "Publish post"}
-          </button>
         </form>
       </MobilePostSheet>
     </div>

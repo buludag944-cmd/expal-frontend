@@ -342,8 +342,17 @@ export default function MobileVisaTracker() {
         </>
       )}
 
-      <MobilePostSheet open={showDocForm} onClose={() => setShowDocForm(false)} title="Add to document vault">
-        <form onSubmit={submitDocument} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <MobilePostSheet
+        open={showDocForm}
+        onClose={() => setShowDocForm(false)}
+        title="Add to document vault"
+        footer={
+          <button type="submit" form="mob-vault-doc-form" className="mob-btn-primary" disabled={docBusy}>
+            {docBusy ? "Saving…" : "Save document"}
+          </button>
+        }
+      >
+        <form id="mob-vault-doc-form" onSubmit={submitDocument}>
           <input
             className="mob-search-input"
             placeholder="Document name (e.g. IRP Card 2026)"
@@ -374,9 +383,6 @@ export default function MobileVisaTracker() {
             onChange={(e) => setDocForm({ ...docForm, fileUrl: e.target.value })}
           />
           {docError && <p style={{ color: "#a32d2d", fontSize: 12, margin: 0 }}>{docError}</p>}
-          <button type="submit" className="mob-btn-primary" style={{ height: 44 }} disabled={docBusy}>
-            {docBusy ? "Saving…" : "Save document"}
-          </button>
         </form>
       </MobilePostSheet>
     </MobileScreen>

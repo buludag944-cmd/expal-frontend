@@ -357,8 +357,17 @@ export default function MobileProfile() {
       </button>
       <p className="mob-version">EXPal · Built with ♥ for expats</p>
 
-      <MobilePostSheet open={showContact} onClose={() => setShowContact(false)} title="Contact founder">
-        <form onSubmit={sendContact}>
+      <MobilePostSheet
+        open={showContact}
+        onClose={() => setShowContact(false)}
+        title="Contact founder"
+        footer={
+          <button type="submit" form="mob-contact-form" className="mob-btn-primary" disabled={contactBusy}>
+            {contactBusy ? "Sending…" : "Send message"}
+          </button>
+        }
+      >
+        <form id="mob-contact-form" onSubmit={sendContact}>
           <p style={{ fontSize: 13, color: "var(--mob-text-secondary)", margin: "0 0 12px", lineHeight: 1.45 }}>
             Your message is delivered with your name ({name}) and email so the founder knows who wrote.
           </p>
@@ -369,11 +378,8 @@ export default function MobileProfile() {
             onChange={(e) => setContactMsg(e.target.value)}
             required
             minLength={5}
-            style={{ minHeight: 120, marginBottom: 12 }}
+            style={{ minHeight: 120 }}
           />
-          <button type="submit" className="mob-btn-primary" style={{ width: "100%" }} disabled={contactBusy}>
-            {contactBusy ? "Sending…" : "Send message"}
-          </button>
           {contactStatus && (
             <p
               style={{

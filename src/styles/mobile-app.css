@@ -393,40 +393,48 @@ html.mob-native-shell #root {
 .mob-post-sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  z-index: 80;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  /* Do not scroll the backdrop — only the sheet body scrolls */
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  /* Absolute sheet anchors to this definite box — required for iOS flex scroll */
   overflow: hidden;
   overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mob-post-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
   max-width: 720px;
+  margin: 0 auto;
+  /* max-height alone is NOT a definite height for iOS flex children */
+  max-height: 85%;
   max-height: min(85dvh, 720px);
-  background: var(--mob-card);
+  background: #ffffff;
   border-radius: 16px 16px 0 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
-  /* Sheet covers the tab bar — needs its own bottom inset */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   box-sizing: border-box;
+  /* Force opaque compositing layer — fixes “blurry / see-through” sheet on iOS WKWebView */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  isolation: isolate;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18);
 }
 
 .mob-post-sheet-header {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
   border-bottom: 0.5px solid var(--mob-border);
-  background: var(--mob-card);
+  background: #ffffff;
   z-index: 1;
 }
 
@@ -434,23 +442,22 @@ html.mob-native-shell #root {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+  color: var(--mob-text);
 }
 
 .mob-post-sheet-body {
-  flex: 1 1 auto;
+  /* Grow with content; shrink + scroll when sheet hits max-height (iOS-safe) */
+  flex: 0 1 auto;
   min-height: 0;
   padding: 16px;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  background: #ffffff;
   box-sizing: border-box;
 }
 
-/* Forms inside the sheet should stretch naturally and scroll with the body */
 .mob-post-sheet-body > form {
   display: flex;
   flex-direction: column;
@@ -461,12 +468,37 @@ html.mob-native-shell #root {
 .mob-post-sheet-body .mob-search-input {
   height: 44px;
   flex-shrink: 0;
+  background: var(--mob-bg);
+  color: var(--mob-text);
 }
 
 .mob-post-sheet-body textarea.mob-search-input {
   min-height: 96px;
   height: auto;
   padding-top: 12px;
+}
+
+.mob-post-sheet-footer {
+  flex: 0 0 auto;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 0.5px solid var(--mob-border);
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.mob-post-sheet-footer .mob-btn-primary {
+  width: 100%;
+  height: 48px;
+  margin: 0;
+}
+
+/* Hide app chrome under the sheet so Save never fights the tab bar */
+html.mob-sheet-open .mob-tab-bar,
+html.mob-sheet-open .mob-chat-fab,
+html.mob-sheet-open .mob-fab,
+html.mob-sheet-open .mob-walkthrough-panel {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .mob-empty-state {
@@ -1978,7 +2010,10 @@ html.mob-native-shell #root {
 [data-theme="dark"] .mob-screen-header,
 [data-theme="dark"] .mob-settings-card,
 [data-theme="dark"] .mob-card,
-[data-theme="dark"] .mob-post-sheet {
+[data-theme="dark"] .mob-post-sheet,
+[data-theme="dark"] .mob-post-sheet-header,
+[data-theme="dark"] .mob-post-sheet-body,
+[data-theme="dark"] .mob-post-sheet-footer {
   background: var(--mob-card);
   color: var(--mob-text);
 }

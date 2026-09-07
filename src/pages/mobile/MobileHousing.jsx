@@ -87,8 +87,13 @@ export default function MobileHousing({
         open={showForm}
         onClose={toggleForm}
         title={editingId != null ? "Edit listing" : "Post new housing"}
+        footer={
+          <button type="submit" form="mob-housing-form" className="mob-btn-primary">
+            {editingId != null ? "Save listing" : "Post listing"}
+          </button>
+        }
       >
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <form id="mob-housing-form" onSubmit={handleSubmit}>
           <input className="mob-search-input" placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
           <input className="mob-search-input" placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required />
           <input className="mob-search-input" type="number" placeholder="Price €/mo" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
@@ -104,9 +109,6 @@ export default function MobileHousing({
               ))}
             </div>
           )}
-          <button type="submit" className="mob-btn-primary" style={{ height: 44 }}>
-            {editingId != null ? "Save listing" : "Post listing"}
-          </button>
         </form>
       </MobilePostSheet>
 

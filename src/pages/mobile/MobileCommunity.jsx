@@ -424,9 +424,20 @@ export default function MobileCommunity({ initialTab }) {
         open={showPost && canPost}
         onClose={closePost}
         title={activeTab === "Events" ? (editingEventId ? "Edit event" : "Add an event") : "New thread"}
+        footer={
+          activeTab === "Threads" ? (
+            <button type="submit" form="mob-community-thread-form" className="mob-btn-primary">
+              Post thread
+            </button>
+          ) : (
+            <button type="submit" form="mob-community-event-form" className="mob-btn-primary">
+              {editingEventId ? "Save changes" : "Post event"}
+            </button>
+          )
+        }
       >
         {activeTab === "Threads" ? (
-          <form onSubmit={createThread} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <form id="mob-community-thread-form" onSubmit={createThread}>
             {activeSpace && (
               <p style={{ fontSize: 12, color: "var(--mob-text-muted)", margin: 0 }}>
                 Posting in: {activeSpace.name}
@@ -435,18 +446,14 @@ export default function MobileCommunity({ initialTab }) {
             <input className="mob-search-input" placeholder="Title" value={newThread.title} onChange={(e) => setNewThread({ ...newThread, title: e.target.value })} required />
             <textarea className="mob-search-input" placeholder="What's on your mind?" value={newThread.body} onChange={(e) => setNewThread({ ...newThread, body: e.target.value })} required />
             {postError && <p style={{ color: "#a32d2d", fontSize: 12, margin: 0 }}>{postError}</p>}
-            <button type="submit" className="mob-btn-primary" style={{ height: 44 }}>Post thread</button>
           </form>
         ) : (
-          <form onSubmit={postEvent} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <form id="mob-community-event-form" onSubmit={postEvent}>
             <input className="mob-search-input" placeholder="Title" value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} required />
             <textarea className="mob-search-input" placeholder="Description" value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} required />
             <input className="mob-search-input" type="datetime-local" value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} required />
             <input className="mob-search-input" placeholder="Location" value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} required />
             {postError && <p style={{ color: "#a32d2d", fontSize: 12, margin: 0 }}>{postError}</p>}
-            <button type="submit" className="mob-btn-primary" style={{ height: 44 }}>
-              {editingEventId ? "Save changes" : "Post event"}
-            </button>
           </form>
         )}
       </MobilePostSheet>

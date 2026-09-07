@@ -169,8 +169,17 @@ export function MobileContentList({ config }) {
 
       <MobileFab label={config.addLabel} onClick={() => setShowForm(true)} />
 
-      <MobilePostSheet open={showForm} onClose={() => setShowForm(false)} title={config.addLabel}>
-        <form onSubmit={submitNew}>
+      <MobilePostSheet
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title={config.addLabel}
+        footer={
+          <button type="submit" form="mob-content-form" className="mob-btn-primary">
+            Publish
+          </button>
+        }
+      >
+        <form id="mob-content-form" onSubmit={submitNew}>
           <input
             className="mob-search-input"
             placeholder="Title"
@@ -198,9 +207,6 @@ export function MobileContentList({ config }) {
             required
           />
           {submitErr && <p className="mob-search-error">{submitErr}</p>}
-          <button type="submit" className="mob-btn-primary" style={{ width: "100%" }}>
-            Publish
-          </button>
         </form>
       </MobilePostSheet>
     </div>

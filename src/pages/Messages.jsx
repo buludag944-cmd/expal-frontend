@@ -30,9 +30,9 @@ function formatListTime(iso) {
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate();
   if (sameDay) {
-    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleTimeString("en-IE", { hour: "2-digit", minute: "2-digit" });
   }
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-IE", { month: "short", day: "numeric" });
 }
 
 function buildThreadsFromConversations(rows, myId) {
@@ -440,7 +440,7 @@ export default function Messages() {
                   {m.content}
                   <p className={native ? "mob-msg-time" : cn("mt-1 text-xs opacity-70", mine ? "text-right" : "")}>
                     {m.createdAt
-                      ? new Date(m.createdAt).toLocaleString([], {
+                      ? new Date(m.createdAt).toLocaleString("en-IE", {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
@@ -536,7 +536,7 @@ export default function Messages() {
                       {m.content}
                       <p className="mob-msg-time">
                         {m.createdAt
-                          ? new Date(m.createdAt).toLocaleString([], {
+                          ? new Date(m.createdAt).toLocaleString("en-IE", {
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",

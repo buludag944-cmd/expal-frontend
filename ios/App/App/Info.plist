@@ -6,6 +6,11 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<!-- English-only: keeps native date/time pickers in English even if the device language is Turkish, etc. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>Expal</string>
 	<key>CFBundleExecutable</key>

@@ -451,7 +451,7 @@ export default function MobileCommunity({ initialTab }) {
           <form id="mob-community-event-form" onSubmit={postEvent}>
             <input className="mob-search-input" placeholder="Title" value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} required />
             <textarea className="mob-search-input" placeholder="Description" value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} required />
-            <input className="mob-search-input" type="datetime-local" value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} required />
+            <input className="mob-search-input" type="datetime-local" lang="en" value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} required />
             <input className="mob-search-input" placeholder="Location" value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} required />
             {postError && <p style={{ color: "#a32d2d", fontSize: 12, margin: 0 }}>{postError}</p>}
           </form>

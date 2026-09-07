@@ -376,6 +376,7 @@ export default function MobileVisaTracker() {
           <input
             className="mob-search-input"
             type="date"
+            lang="en"
             value={docForm.expiryDate}
             onChange={(e) => setDocForm({ ...docForm, expiryDate: e.target.value })}
             aria-label="Expiry date"

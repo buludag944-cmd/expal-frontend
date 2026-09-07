@@ -8,6 +8,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // App UI is English-only. Without this, WKWebView <input type="date"> pickers follow
+        // the device language (e.g. Turkish month names on a TR locale phone).
+        UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+
         // Firebase (reads GoogleService-Info.plist). Safe if Capacitor plugin also configures later.
         if FirebaseApp.app() == nil {
             FirebaseApp.configure()

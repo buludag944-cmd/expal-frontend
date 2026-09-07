@@ -165,6 +165,12 @@ export default function MobileCommunity({ initialTab }) {
       setPostError("Sign in to post an event.");
       return;
     }
+    const day = (eventForm.date || "").slice(0, 10);
+    const time = (eventForm.date || "").split("T")[1]?.slice(0, 5);
+    if (!day || !time) {
+      setPostError("Choose both a date and a time for the event.");
+      return;
+    }
     const isEditing = editingEventId != null;
     const res = await fetch(isEditing ? `${API}/api/events/${editingEventId}` : `${API}/api/events`, {
       method: isEditing ? "PUT" : "POST",
@@ -172,7 +178,7 @@ export default function MobileCommunity({ initialTab }) {
       body: JSON.stringify({
         title: eventForm.title.trim(),
         description: eventForm.description.trim(),
-        date: eventForm.date,
+        date: `${day}T${time}`,
         location: eventForm.location.trim(),
       }),
     });
@@ -451,7 +457,47 @@ export default function MobileCommunity({ initialTab }) {
           <form id="mob-community-event-form" onSubmit={postEvent}>
             <input className="mob-search-input" placeholder="Title" value={eventForm.title} onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })} required />
             <textarea className="mob-search-input" placeholder="Description" value={eventForm.description} onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })} required />
-            <input className="mob-search-input" type="datetime-local" lang="en" value={eventForm.date} onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })} required />
+            <div className="mob-sheet-datetime-row">
+              <label className="mob-sheet-field-label">
+                Date
+                <input
+                  className="mob-search-input"
+                  type="date"
+                  lang="en"
+                  value={(eventForm.date || "").slice(0, 10)}
+                  onChange={(e) => {
+                    const time = (eventForm.date || "").split("T")[1]?.slice(0, 5) || "12:00";
+                    setEventForm({
+                      ...eventForm,
+                      date: e.target.value ? `${e.target.value}T${time}` : "",
+                    });
+                  }}
+                  required
+                />
+              </label>
+              <label className="mob-sheet-field-label">
+                Time
+                <input
+                  className="mob-search-input"
+                  type="time"
+                  lang="en"
+                  value={(eventForm.date || "").split("T")[1]?.slice(0, 5) || ""}
+                  onChange={(e) => {
+                    const day = (eventForm.date || "").slice(0, 10);
+                    if (!day) {
+                      setPostError("Pick a date first, then the time.");
+                      return;
+                    }
+                    setPostError("");
+                    setEventForm({
+                      ...eventForm,
+                      date: `${day}T${e.target.value || "12:00"}`,
+                    });
+                  }}
+                  required
+                />
+              </label>
+            </div>
             <input className="mob-search-input" placeholder="Location" value={eventForm.location} onChange={(e) => setEventForm({ ...eventForm, location: e.target.value })} required />
             {postError && <p style={{ color: "#a32d2d", fontSize: 12, margin: 0 }}>{postError}</p>}
           </form>

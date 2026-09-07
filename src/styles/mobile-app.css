@@ -472,6 +472,37 @@ html.mob-native-shell #root {
   color: var(--mob-text);
 }
 
+.mob-sheet-datetime-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.mob-sheet-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mob-text-muted);
+}
+
+.mob-post-sheet-body input[type="date"],
+.mob-post-sheet-body input[type="time"],
+.mob-post-sheet-body input[type="datetime-local"] {
+  height: auto;
+  min-height: 44px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  /* Keep native picker chrome tappable in WKWebView / Android WebView */
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  color-scheme: light;
+}
+
 .mob-post-sheet-body textarea.mob-search-input {
   min-height: 88px;
   height: auto;

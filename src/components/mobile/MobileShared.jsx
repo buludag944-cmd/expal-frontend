@@ -198,9 +198,21 @@ export function MobilePostSheet({ open, onClose, title, children, footer = null 
       }
     };
 
+    const isNativePickerField = (el) => {
+      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement)) return false;
+      if (el instanceof HTMLSelectElement) return true;
+      const t = (el.type || "").toLowerCase();
+      return t === "date" || t === "time" || t === "datetime-local" || t === "month" || t === "week";
+    };
+
     const ensureFocusedVisible = () => {
-      syncToVisualViewport();
       const field = focusedRef.current;
+      // Resizing / scrollIntoView while a native date/time picker is opening dismisses it on iOS/Android WebView.
+      if (field && isNativePickerField(field)) {
+        syncToVisualViewport();
+        return;
+      }
+      syncToVisualViewport();
       if (field && bodyRef.current?.contains(field)) {
         scrollFieldIntoBody(field);
       }
@@ -212,6 +224,11 @@ export function MobilePostSheet({ open, onClose, title, children, footer = null 
       if (!bodyRef.current?.contains(t)) return;
       if (!/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
       focusedRef.current = t;
+      // Native pickers: only a light viewport sync — do not scrollIntoView (breaks the picker).
+      if (isNativePickerField(t)) {
+        syncToVisualViewport();
+        return;
+      }
       // iOS keyboard animation ~250–350ms; sync before and after
       syncToVisualViewport();
       window.setTimeout(ensureFocusedVisible, 50);

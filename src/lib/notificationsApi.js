@@ -54,6 +54,24 @@ export async function markMessageNotificationsRead(token, peerId) {
   return res.json();
 }
 
+export async function deleteNotification(token, id) {
+  const res = await fetch(`${API}/api/notifications/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error("Could not delete notification");
+  return res.json();
+}
+
+export async function deleteReadNotifications(token) {
+  const res = await fetch(`${API}/api/notifications/read`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error("Could not delete read notifications");
+  return res.json();
+}
+
 export function notificationPath(n) {
   const data = n?.data || {};
   if (data.path) return data.path;

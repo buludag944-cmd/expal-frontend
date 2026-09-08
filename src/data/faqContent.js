@@ -222,7 +222,7 @@ export const FAQ_CATEGORIES = [
       },
       {
         q: "Do notifications mark as read automatically?",
-        a: "Opening a DM or related content from Notifications marks items read. The inbox polls for updates while you use the app.",
+        a: "Opening a DM or related content from Notifications marks items read. You can also tap Read all / Mark all read. After a notification is read, tap Delete on that row, or Delete read notifications to clear all read items.",
       },
     ],
   },

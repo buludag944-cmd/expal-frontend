@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { isNativeApp } from "../lib/platform";
 import {
+  deleteNotification,
+  deleteReadNotifications,
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -17,7 +19,7 @@ function formatWhen(iso) {
   if (diff < 60_000) return "Just now";
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-IE", { month: "short", day: "numeric" });
 }
 
 export default function Notifications() {
@@ -27,6 +29,7 @@ export default function Notifications() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -64,6 +67,35 @@ export default function Notifications() {
     setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
   };
 
+  const removeOne = async (n, e) => {
+    e?.stopPropagation?.();
+    if (!n.isRead) return;
+    setBusyId(n.id);
+    try {
+      await deleteNotification(token, n.id);
+      setItems((prev) => prev.filter((x) => x.id !== n.id));
+    } catch (err) {
+      setError(err.message || "Could not delete");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const clearRead = async () => {
+    const count = items.filter((n) => n.isRead).length;
+    if (!count) return;
+    if (!window.confirm(`Delete ${count} read notification${count === 1 ? "" : "s"}?`)) return;
+    try {
+      await deleteReadNotifications(token);
+      setItems((prev) => prev.filter((n) => !n.isRead));
+    } catch (err) {
+      setError(err.message || "Could not delete read notifications");
+    }
+  };
+
+  const hasUnread = items.some((n) => !n.isRead);
+  const hasRead = items.some((n) => n.isRead);
+
   const body = (
     <>
       {error && (
@@ -85,57 +117,115 @@ export default function Notifications() {
           You&apos;re all caught up. New messages, replies, and community activity will show up here.
         </p>
       )}
+      {!loading && hasRead && (
+        <div style={{ marginBottom: 12 }}>
+          <button
+            type="button"
+            className={native ? "mob-btn-secondary" : "text-sm underline text-muted"}
+            style={native ? { width: "100%", minHeight: 40 } : undefined}
+            onClick={clearRead}
+          >
+            Delete read notifications
+          </button>
+        </div>
+      )}
       <div className={native ? "" : "space-y-2"}>
         {items.map((n) => (
-          <button
+          <div
             key={n.id}
-            type="button"
-            onClick={() => openItem(n)}
-            className={native ? "mob-card" : "w-full text-left rounded-xl border border-black/10 bg-white p-4 dark:bg-[rgb(var(--card))]"}
+            className={native ? "mob-card" : "rounded-xl border border-black/10 bg-white dark:bg-[rgb(var(--card))]"}
             style={
               native
                 ? {
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "stretch",
                     border: n.isRead ? undefined : "1px solid var(--mob-purple-border)",
                     background: n.isRead ? undefined : "var(--mob-purple-light)",
                     marginBottom: 10,
-                    cursor: "pointer",
+                    padding: 0,
+                    overflow: "hidden",
                   }
                 : {
+                    display: "flex",
+                    gap: 0,
                     background: n.isRead ? undefined : "rgba(83, 74, 183, 0.08)",
                     borderColor: n.isRead ? undefined : "rgba(83, 74, 183, 0.35)",
                   }
             }
           >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
-              <strong style={{ fontSize: 14 }}>{n.title}</strong>
-              <span style={{ fontSize: 11, color: "var(--mob-text-muted)", flexShrink: 0 }}>
-                {formatWhen(n.createdAt)}
-              </span>
-            </div>
-            {n.body ? (
-              <p style={{ margin: 0, fontSize: 13, color: "var(--mob-text-secondary)", lineHeight: 1.4 }}>
-                {n.body}
-              </p>
-            ) : null}
-            {!n.isRead && (
-              <span
-                style={{
-                  display: "inline-block",
-                  marginTop: 8,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "var(--mob-purple)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                }}
+            <button
+              type="button"
+              onClick={() => openItem(n)}
+              className={native ? undefined : "flex-1 text-left p-4"}
+              style={
+                native
+                  ? {
+                      flex: 1,
+                      textAlign: "left",
+                      border: "none",
+                      background: "transparent",
+                      padding: 14,
+                      cursor: "pointer",
+                      minWidth: 0,
+                    }
+                  : undefined
+              }
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                <strong style={{ fontSize: 14 }}>{n.title}</strong>
+                <span style={{ fontSize: 11, color: "var(--mob-text-muted)", flexShrink: 0 }}>
+                  {formatWhen(n.createdAt)}
+                </span>
+              </div>
+              {n.body ? (
+                <p style={{ margin: 0, fontSize: 13, color: "var(--mob-text-secondary)", lineHeight: 1.4 }}>
+                  {n.body}
+                </p>
+              ) : null}
+              {!n.isRead && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    marginTop: 8,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "var(--mob-purple)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  Unread
+                </span>
+              )}
+            </button>
+            {n.isRead && (
+              <button
+                type="button"
+                aria-label="Delete notification"
+                disabled={busyId === n.id}
+                onClick={(e) => removeOne(n, e)}
+                className={native ? undefined : "px-3 text-sm text-muted hover:text-red-600 shrink-0"}
+                style={
+                  native
+                    ? {
+                        border: "none",
+                        borderLeft: "0.5px solid var(--mob-border)",
+                        background: "transparent",
+                        color: "var(--mob-red-dark)",
+                        padding: "0 14px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        minWidth: 64,
+                      }
+                    : undefined
+                }
               >
-                Unread
-              </span>
+                {busyId === n.id ? "…" : "Delete"}
+              </button>
             )}
-          </button>
+          </div>
         ))}
       </div>
     </>
@@ -147,9 +237,13 @@ export default function Notifications() {
         title="Notifications"
         backTo="/"
         action={
-          items.some((n) => !n.isRead) ? (
+          hasUnread ? (
             <button type="button" className="mob-back-btn" style={{ background: "none", fontSize: 12, width: "auto", padding: "0 6px" }} onClick={markAll}>
               Read all
+            </button>
+          ) : hasRead ? (
+            <button type="button" className="mob-back-btn" style={{ background: "none", fontSize: 12, width: "auto", padding: "0 6px" }} onClick={clearRead}>
+              Clear
             </button>
           ) : (
             <span className="mob-back-btn--placeholder w-8" />
@@ -170,10 +264,15 @@ export default function Notifications() {
           <h1 className="font-display text-2xl font-bold m-0">Notifications</h1>
           <p className="text-muted m-0 mt-1 text-sm">Messages, replies, and community updates</p>
         </div>
-        <div className="flex items-center gap-2">
-          {items.some((n) => !n.isRead) && (
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {hasUnread && (
             <button type="button" className="text-sm underline" onClick={markAll}>
               Mark all read
+            </button>
+          )}
+          {hasRead && (
+            <button type="button" className="text-sm underline" onClick={clearRead}>
+              Delete read
             </button>
           )}
           <Link to="/" className="text-sm underline">

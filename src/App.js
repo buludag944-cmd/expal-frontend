@@ -21,6 +21,7 @@ import Messages from "./pages/Messages";
 import ExpatEssentials from "./pages/ExpatEssentials";
 import LocalKnowHow from "./pages/LocalKnowHow";
 import Privacy from "./pages/Privacy";
+import DeleteAccount from "./pages/DeleteAccount";
 import ChildSafetyStandards from "./pages/ChildSafetyStandards";
 import EmploymentSupport from "./pages/EmploymentSupport";
 import Referrals from "./pages/Referrals";
@@ -1303,6 +1304,7 @@ function MainApp() {
           <Route path="/blog" element={<BlogList />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/child-safety" element={<ChildSafetyStandards />} />
           <Route path="/employment-support" element={<EmploymentSupport />} />
           <Route path="*" element={<AuthEntry />} />
@@ -1342,6 +1344,7 @@ function MainApp() {
             <Route path="/blog" element={<BlogList />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/delete-account" element={<DeleteAccount />} />
             <Route path="/child-safety" element={<ChildSafetyStandards />} />
             <Route path="/employment-support" element={<EmploymentSupport />} />
             <Route path="/onboarding" element={<Onboarding />} />

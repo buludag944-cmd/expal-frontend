@@ -241,7 +241,7 @@ export const FAQ_CATEGORIES = [
       },
       {
         q: "How do I delete my account or data?",
-        a: "Open Profile → Delete account (or Account settings on mobile). Confirm twice, then type DELETE. This permanently removes your profile and associated data. You can also contact the founder if you need help.",
+        a: "Open Profile → Delete account, or visit https://expalapp.netlify.app/delete-account. Confirm and type DELETE. This permanently removes your profile and associated data. You can also email expalappsupport@gmail.com.",
       },
       {
         q: "Is my email visible to everyone?",

@@ -67,7 +67,13 @@ function PrivacyContent({ native = false }) {
       <h2 className="mob-legal-h2">Your choices</h2>
       <ul className="mob-legal-list">
         <li>Update or delete content you posted (where the app allows edit/delete)</li>
-        <li>Delete your account in Profile → Delete account, or contact us for help</li>
+        <li>
+          Delete your account via{" "}
+          <Link to="/delete-account" className="mob-legal-link">
+            expalapp.netlify.app/delete-account
+          </Link>
+          , in Profile → Delete account, or by contacting us
+        </li>
         <li>Revoke Google access via your Google Account settings</li>
       </ul>
 

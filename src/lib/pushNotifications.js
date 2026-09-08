@@ -8,6 +8,10 @@ const PUSH_PROMPTED_KEY = "expal-push-prompted";
 let listenersAttached = false;
 let currentAuthToken = null;
 
+function sleep(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 async function postTokenToBackend(fcmToken, authToken) {
   const API = getApiBaseUrl();
   const res = await fetch(`${API}/api/push/register`, {
@@ -88,17 +92,35 @@ async function attachPushListeners() {
   });
 }
 
+/**
+ * iOS often needs a short wait after permission + APNs registration before FCM token is ready.
+ */
+async function getFcmTokenWithRetry() {
+  const delaysMs = Capacitor.getPlatform() === "ios" ? [0, 800, 2000, 4000, 7000] : [0, 500, 1500];
+  let lastError = null;
+  for (const wait of delaysMs) {
+    if (wait) await sleep(wait);
+    try {
+      const { token } = await FirebaseMessaging.getToken();
+      if (token) return { token, error: null };
+    } catch (err) {
+      lastError = err;
+      console.warn("[push] getToken attempt failed:", err?.message || err);
+    }
+  }
+  return { token: null, error: lastError };
+}
+
 async function registerCurrentToken(authToken) {
   await ensureAndroidChannel();
-  let token;
-  try {
-    ({ token } = await FirebaseMessaging.getToken());
-  } catch (err) {
-    console.warn("[push] getToken failed:", err?.message || err);
-    return { granted: true, registered: false, reason: "token_failed", detail: err?.message };
-  }
+  const { token, error } = await getFcmTokenWithRetry();
   if (!token) {
-    return { granted: true, registered: false, reason: "no_token" };
+    return {
+      granted: true,
+      registered: false,
+      reason: error ? "token_failed" : "no_token",
+      detail: error?.message || "FCM token not ready yet. Tap Enable push alerts again in a few seconds.",
+    };
   }
   const result = await postTokenToBackend(token, authToken);
   return {
@@ -123,7 +145,7 @@ export async function syncPushTokenIfGranted(authToken) {
 }
 
 /**
- * Prompt once after login (first launch / first session) so lock-screen push works.
+ * Prompt once after login (first launch / first session) so lock-screen push can work.
  * Safe to call repeatedly — only prompts when never asked and permission not granted.
  */
 export async function ensurePushPermissionOnce(authToken) {
@@ -187,6 +209,7 @@ export async function setupPushNotifications(authToken) {
     /* ignore */
   }
 
+  // After iOS permission grant, APNs registration is async — retry getToken.
   return registerCurrentToken(authToken);
 }
 

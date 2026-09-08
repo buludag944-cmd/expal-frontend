@@ -160,13 +160,13 @@ export default function MobileProfile() {
     setMessage("");
     const result = await setupPushNotifications(token);
     if (result.granted && result.registered) {
-      setMessage("Push notifications enabled");
+      setMessage("Push notifications enabled — leave the app and ask someone to DM you to test");
     } else if (result.reason === "denied") {
-      setMessage("Allow notifications in your phone Settings → Apps → EXPal → Notifications");
+      setMessage("Allow notifications in iPhone Settings → Notifications → EXPal");
     } else if (result.reason === "web") {
       setMessage("Push notifications work in the native iOS and Android apps");
     } else if (result.reason === "token_failed" || result.reason === "no_token") {
-      setMessage("Could not connect to Firebase. Check your internet and try again.");
+      setMessage(result.detail || "Could not get a push token yet. Tap Enable push alerts again.");
     } else if (result.reason === "register_failed") {
       setMessage(result.detail ? `Server: ${result.detail}` : "Could not register device. Try again.");
     } else {

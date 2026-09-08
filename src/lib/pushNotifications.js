@@ -2,6 +2,9 @@ import { Capacitor } from "@capacitor/core";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { getApiBaseUrl } from "../apiConfig";
 
+const ANDROID_CHANNEL_ID = "expal_default";
+const PUSH_PROMPTED_KEY = "expal-push-prompted";
+
 let listenersAttached = false;
 let currentAuthToken = null;
 
@@ -26,6 +29,23 @@ async function postTokenToBackend(fcmToken, authToken) {
   }
   console.info("[push] device registered with backend");
   return { ok: true };
+}
+
+async function ensureAndroidChannel() {
+  if (Capacitor.getPlatform() !== "android") return;
+  try {
+    await FirebaseMessaging.createChannel({
+      id: ANDROID_CHANNEL_ID,
+      name: "EXPal",
+      description: "Messages, community activity, and visa reminders",
+      importance: 4,
+      sound: "default",
+      vibration: true,
+      visibility: 1,
+    });
+  } catch (err) {
+    console.warn("[push] createChannel:", err?.message || err);
+  }
 }
 
 function handleNotificationTap(notification) {
@@ -68,6 +88,27 @@ async function attachPushListeners() {
   });
 }
 
+async function registerCurrentToken(authToken) {
+  await ensureAndroidChannel();
+  let token;
+  try {
+    ({ token } = await FirebaseMessaging.getToken());
+  } catch (err) {
+    console.warn("[push] getToken failed:", err?.message || err);
+    return { granted: true, registered: false, reason: "token_failed", detail: err?.message };
+  }
+  if (!token) {
+    return { granted: true, registered: false, reason: "no_token" };
+  }
+  const result = await postTokenToBackend(token, authToken);
+  return {
+    granted: true,
+    registered: result.ok,
+    reason: result.ok ? "ok" : "register_failed",
+    detail: result.error,
+  };
+}
+
 /**
  * Re-register FCM token if user already granted permission (no prompt).
  * Call after login so returning users stay subscribed without a login-time dialog.
@@ -78,8 +119,42 @@ export async function syncPushTokenIfGranted(authToken) {
   await attachPushListeners();
   const perm = await FirebaseMessaging.checkPermissions();
   if (perm.receive !== "granted") return;
-  const { token } = await FirebaseMessaging.getToken();
-  if (token) await postTokenToBackend(token, authToken);
+  await registerCurrentToken(authToken);
+}
+
+/**
+ * Prompt once after login (first launch / first session) so lock-screen push works.
+ * Safe to call repeatedly — only prompts when never asked and permission not granted.
+ */
+export async function ensurePushPermissionOnce(authToken) {
+  if (!authToken || !Capacitor.isNativePlatform()) {
+    return { granted: false, registered: false, reason: "noop" };
+  }
+  currentAuthToken = authToken;
+  await attachPushListeners();
+
+  const perm = await FirebaseMessaging.checkPermissions();
+  if (perm.receive === "granted") {
+    return registerCurrentToken(authToken);
+  }
+
+  let prompted = false;
+  try {
+    prompted = localStorage.getItem(PUSH_PROMPTED_KEY) === "1";
+  } catch {
+    /* private mode */
+  }
+  if (prompted) {
+    return { granted: false, registered: false, reason: "prompted_before" };
+  }
+
+  try {
+    localStorage.setItem(PUSH_PROMPTED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+
+  return setupPushNotifications(authToken);
 }
 
 /**
@@ -91,7 +166,7 @@ export async function setupPushNotifications(authToken) {
   currentAuthToken = authToken;
 
   if (!Capacitor.isNativePlatform()) {
-    console.info("[push] web browser — use native app for push (see IOS_PUSH_SETUP.md)");
+    console.info("[push] web browser — use the native iOS/Android app for push");
     return { granted: false, registered: false, reason: "web" };
   }
 
@@ -106,25 +181,13 @@ export async function setupPushNotifications(authToken) {
     return { granted: false, registered: false, reason: "denied" };
   }
 
-  let token;
   try {
-    ({ token } = await FirebaseMessaging.getToken());
-  } catch (err) {
-    console.warn("[push] getToken failed:", err?.message || err);
-    return { granted: true, registered: false, reason: "token_failed", detail: err?.message };
+    localStorage.setItem(PUSH_PROMPTED_KEY, "1");
+  } catch {
+    /* ignore */
   }
 
-  if (!token) {
-    return { granted: true, registered: false, reason: "no_token" };
-  }
-
-  const result = await postTokenToBackend(token, authToken);
-  return {
-    granted: true,
-    registered: result.ok,
-    reason: result.ok ? "ok" : "register_failed",
-    detail: result.error,
-  };
+  return registerCurrentToken(authToken);
 }
 
 export async function unregisterPushDevice(authToken, fcmToken) {

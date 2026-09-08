@@ -1,7 +1,10 @@
 # EXPal push on iPhone (iOS)
 
-iOS push uses the **same Firebase project** as Android (`expal-app-1ab1a`).  
+iOS push uses the **same Firebase project** as Android (`expalapp-a6422`).  
 You need an **Apple Developer account ($99/year)** to run the app on a real iPhone and receive push.
+
+> **Decision:** EXPal uses **Firebase Cloud Messaging for both platforms** (FCM → APNs on iOS).  
+> No separate OneSignal/Expo. The server stores FCM tokens per user and sends display notifications for lock screen / notification tray.
 
 ---
 
@@ -9,17 +12,19 @@ You need an **Apple Developer account ($99/year)** to run the app on a real iPho
 
 ### 1. Add iOS app in Firebase
 
-1. [Firebase Console](https://console.firebase.google.com) → project **expal-app-1ab1a**
+1. [Firebase Console](https://console.firebase.google.com) → project **expalapp-a6422**
 2. **Add app** → **iOS**
 3. **Bundle ID:** `com.yourbrand.expal` (must match Xcode)
 4. Download **`GoogleService-Info.plist`**
-5. Put it here (replace this readme’s folder file):
+5. Put it here:
 
    ```
    frontend/ios/App/App/GoogleService-Info.plist
    ```
 
-### 2. Upload APNs key to Firebase (required for iPhone push)
+### 2. Upload APNs key to Firebase (**required** for lock-screen / background push)
+
+Without this step, iOS often only receives notifications while the app is open.
 
 1. [Apple Developer](https://developer.apple.com/account) → **Keys** → **+**
 2. Name: `EXPal Push`, enable **Apple Push Notifications service (APNs)**
@@ -56,26 +61,20 @@ Target **App** → **Signing & Capabilities**:
 | **Push Notifications** | Add capability (+ Capability) |
 | **Background Modes** | Check **Remote notifications** |
 
-Xcode may change `aps-environment` in `App.entitlements` to `production` when you archive for App Store — that’s normal.
+Entitlements in this repo:
+
+| Build | File | `aps-environment` |
+|-------|------|-------------------|
+| Debug (Xcode run) | `App.Debug.entitlements` | `development` |
+| Release / TestFlight / App Store | `App.entitlements` | `production` |
 
 ### 4. Confirm `GoogleService-Info.plist`
 
 In Xcode left sidebar: **App** → **GoogleService-Info.plist** must be visible (not red/missing).
 
-### 5. Firebase iOS SDK (Swift Package) — **skip the manual step**
+### 5. Firebase iOS SDK
 
-Firebase’s docs say **File → Add Packages** and add `https://github.com/firebase/firebase-ios-sdk` with **FirebaseAnalytics**.
-
-**You do not need that for EXPal.** This project uses **`@capacitor-firebase/messaging`**, which already pulls in the Firebase iOS SDK through **CapApp-SPM** (`ios/App/CapApp-SPM/Package.swift`):
-
-| Already included via Capacitor | Purpose |
-|------------------------------|---------|
-| **FirebaseCore** | Reads `GoogleService-Info.plist`, runs `FirebaseApp.configure()` |
-| **FirebaseMessaging** | FCM push tokens |
-
-Adding the same SDK again in Xcode can cause **duplicate package** / link errors.
-
-**Only add FirebaseAnalytics** in Xcode if you later want Firebase Analytics in the native app (optional; not required for push).
+This project uses **`@capacitor-firebase/messaging`** via **CapApp-SPM** — do **not** add a second `firebase-ios-sdk` package manually (duplicate link errors).
 
 After `npm run cap:sync`, open Xcode → **File → Packages → Resolve Package Versions** if packages look stuck.
 
@@ -83,51 +82,31 @@ After `npm run cap:sync`, open Xcode → **File → Packages → Resolve Package
 
 ## Part 3 — Backend (Render)
 
-Same as Android — you should already have:
-
 | Variable | Purpose |
 |----------|---------|
-| `FIREBASE_SERVICE_ACCOUNT_JSON` | Server sends FCM to Android + iOS |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Server sends FCM to Android + iOS (must be for project **expalapp-a6422**) |
 
-**Manual Deploy** on Render after any backend change.
-
----
-
-## Part 4 — Test on iPhone
-
-1. Connect iPhone → run from Xcode (not Simulator for first push test)
-2. Log in → allow **Notifications**
-3. Put app in **background**
-4. From another account, send a **message** or **comment**
-5. Notification should appear; tap opens Messages or the post
-
-Render logs:
-
-```text
-[push] registered userId=...
-[push] sent to userId=... success=1
-```
+**Manual Deploy** on Render after backend push changes.
 
 ---
 
-## Troubleshooting
+## Part 4 — What already triggers pushes
 
-| Problem | Fix |
-|---------|-----|
-| No permission prompt | iPhone **Settings → EXPal → Notifications** → Allow |
-| `Firebase init failed` on Render | Fix `FIREBASE_SERVICE_ACCOUNT_JSON` |
-| Xcode “Missing GoogleService-Info.plist” | Download from Firebase iOS app |
-| Push on Android works, not iOS | Upload **APNs .p8 key** to Firebase Cloud Messaging |
-| Works in dev, not TestFlight | Use **production** APNs key / production `aps-environment` for release builds |
+| Event | When |
+|-------|------|
+| Direct message | New DM received |
+| Comment | Someone comments on your housing / event / referral / essentials / know-how post |
+| Forum | New thread in a space you follow; reply on a thread you posted/replied in |
+| Contact founder | Support message to founder |
+| Visa reminders | Overdue / due today / upcoming steps (deploy backend) |
 
 ---
 
-## Cost summary
+## Part 5 — Test on iPhone
 
-| Item | Cost |
-|------|------|
-| Firebase | Free tier |
-| Apple Developer | **$99/year** (required for iPhone app + push) |
-| Render | Your existing plan |
+1. Install from **TestFlight** (production APNs) or Xcode Debug (development APNs)
+2. Log in → allow **Notifications** when prompted (or Profile → Enable push alerts)
+3. Put app in **background** or lock the phone
+4. Send a DM from another account — tray / lock screen should show EXPal
 
-Android + iOS both use **FCM tokens** and the same Render backend.
+If Android works and iOS does not: re-check **Part 1.2** (APNs `.p8` uploaded to Firebase).

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { getApiBaseUrl, PRODUCTION_API_URL } from "./apiConfig";
-import { syncPushTokenIfGranted, unregisterPushDevice } from "./lib/pushNotifications";
+import { syncPushTokenIfGranted, ensurePushPermissionOnce, unregisterPushDevice } from "./lib/pushNotifications";
 import { isNativeApp } from "./lib/platform";
 
 const AuthContext = createContext();
@@ -194,7 +194,10 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (token && user) {
-      syncPushTokenIfGranted(token);
+      // Soft prompt once after login so lock-screen push can work; then keep token fresh.
+      ensurePushPermissionOnce(token).finally(() => {
+        syncPushTokenIfGranted(token);
+      });
     }
   }, [token, user]);
 

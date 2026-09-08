@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
       backgroundColor: "#F25C54",
     },
     FirebaseMessaging: {
-      presentationOptions: ["badge", "sound", "banner", "list"],
+      presentationOptions: ["alert", "badge", "sound"],
     },
     FirebaseAuthentication: {
       skipNativeAuth: false,

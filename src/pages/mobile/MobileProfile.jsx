@@ -164,7 +164,7 @@ export default function MobileProfile() {
     } else if (result.reason === "denied") {
       setMessage("Allow notifications in your phone Settings → Apps → EXPal → Notifications");
     } else if (result.reason === "web") {
-      setMessage("Push notifications work in the Android app");
+      setMessage("Push notifications work in the native iOS and Android apps");
     } else if (result.reason === "token_failed" || result.reason === "no_token") {
       setMessage("Could not connect to Firebase. Check your internet and try again.");
     } else if (result.reason === "register_failed") {

@@ -131,7 +131,7 @@ export default function AiChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={busy}
-              className="flex-1"
+              className="flex-1 bg-surface text-foreground placeholder:text-muted"
             />
             <Button type="submit" size="sm" disabled={busy || !input.trim()} aria-label="Send">
               <Send className="h-4 w-4" />

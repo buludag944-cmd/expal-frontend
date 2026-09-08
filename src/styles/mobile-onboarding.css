@@ -13,7 +13,8 @@
   margin-bottom: 8px;
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  background: #fff;
+  background: rgb(var(--surface));
+  color: rgb(var(--ink));
   cursor: pointer;
   min-height: 48px;
 }
@@ -21,6 +22,19 @@
 .mob-choice--on {
   border-color: rgb(var(--coral));
   background: rgb(var(--coral-pale));
+  color: rgb(var(--ink));
+}
+
+[data-theme="dark"] .mob-choice {
+  background: rgb(var(--surface-2));
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgb(var(--ink));
+}
+
+[data-theme="dark"] .mob-choice--on {
+  background: rgba(232, 71, 58, 0.22);
+  border-color: rgb(var(--coral));
+  color: rgb(var(--ink));
 }
 
 .onboard-banner {

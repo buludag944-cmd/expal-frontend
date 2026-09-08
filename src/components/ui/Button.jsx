@@ -5,7 +5,7 @@ const variants = {
   primary:
     "bg-primary text-primary-foreground hover:bg-primary-700 shadow-md font-display font-semibold rounded-full",
   secondary:
-    "bg-white text-primary border-[1.5px] border-primary hover:bg-[rgb(var(--coral-pale))] font-display font-semibold rounded-full",
+    "bg-surface text-primary border-[1.5px] border-primary hover:bg-[rgb(var(--coral-pale))] font-display font-semibold rounded-full",
   sky: "bg-[rgb(var(--sky))] text-white hover:opacity-90 font-display font-semibold rounded-full shadow-[0_6px_20px_rgba(58,189,224,0.28)]",
   ghost:
     "bg-transparent text-[rgb(var(--ink-soft))] border border-[rgba(0,0,0,0.06)] hover:bg-[rgb(var(--surface-2))] font-display font-semibold rounded-full",

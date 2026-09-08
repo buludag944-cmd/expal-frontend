@@ -65,7 +65,54 @@ html.mob-native-shell body {
   margin: 0;
   padding: 0;
   /* Match app chrome so any sub-pixel gap above the tab bar isn't system gray */
-  background: #f8f7f5;
+  background: var(--mob-bg, #f8f7f5);
+}
+
+/* Expose mobile tokens on html so portaled sheets (body) inherit theme colors */
+html.mob-native-shell {
+  --mob-coral: #d85a30;
+  --mob-coral-light: #faece7;
+  --mob-coral-border: #f0997b;
+  --mob-coral-dark: #993c1d;
+  --mob-pink: #c93b55;
+  --mob-purple: #534ab7;
+  --mob-purple-light: #eeedfe;
+  --mob-purple-border: #afa9ec;
+  --mob-purple-dark: #3c3489;
+  --mob-purple-deep: #26215c;
+  --mob-teal: #0f6e56;
+  --mob-teal-light: #e1f5ee;
+  --mob-teal-border: #5dcaa5;
+  --mob-blue: #185fa5;
+  --mob-blue-light: #e6f1fb;
+  --mob-amber: #854f0b;
+  --mob-amber-light: #faeeda;
+  --mob-red: #e24b4a;
+  --mob-red-light: #fcebeb;
+  --mob-red-border: #f09595;
+  --mob-red-dark: #a32d2d;
+  --mob-sky: #7ecef4;
+  --mob-bg: #f8f7f5;
+  --mob-card: #ffffff;
+  --mob-border: rgba(0, 0, 0, 0.08);
+  --mob-text: #1a1814;
+  --mob-text-secondary: #6b6860;
+  --mob-text-muted: #9a9890;
+}
+
+html.mob-native-shell[data-theme="dark"] {
+  --mob-bg: #16141f;
+  --mob-card: #221f2e;
+  --mob-border: rgba(255, 255, 255, 0.1);
+  --mob-text: #f4f2ef;
+  --mob-text-secondary: #b0ada6;
+  --mob-text-muted: #7d7a74;
+  --mob-coral-light: #3a241c;
+  --mob-purple-light: #2a2740;
+  --mob-teal-light: #1a2f28;
+  --mob-blue-light: #1a2838;
+  --mob-amber-light: #332818;
+  --mob-red-light: #3a1f1f;
 }
 
 html.mob-native-shell #root {
@@ -500,7 +547,7 @@ html.mob-native-shell #root {
   display: block;
   width: 100%;
   max-width: 100%;
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 .mob-post-sheet-body textarea.mob-search-input {
@@ -670,7 +717,14 @@ html.mob-sheet-open .mob-walkthrough-panel {
   font-size: 16px;
   line-height: 1.25;
   color: var(--mob-text);
+  caret-color: var(--mob-text);
+  color-scheme: light dark;
   box-sizing: border-box;
+}
+
+.mob-search-input::placeholder {
+  color: var(--mob-text-muted);
+  opacity: 1;
 }
 
 .mob-home-search {
@@ -1937,6 +1991,24 @@ html.mob-sheet-open .mob-walkthrough-panel {
   cursor: pointer;
 }
 
+.mob-delete-account {
+  margin: 0 16px 8px;
+  height: 44px;
+  border-radius: 999px;
+  border: 0.5px solid var(--mob-red-border);
+  background: transparent;
+  color: var(--mob-red-dark);
+  font-size: 14px;
+  font-weight: 600;
+  width: calc(100% - 32px);
+  cursor: pointer;
+}
+
+[data-theme="dark"] .mob-delete-account {
+  color: #f09595;
+  border-color: rgba(240, 149, 149, 0.45);
+}
+
 .mob-version {
   font-size: 11px;
   color: var(--mob-text-muted);
@@ -2089,7 +2161,30 @@ html.mob-sheet-open .mob-walkthrough-panel {
 [data-theme="dark"] .mob-search-input {
   background: #1a1824;
   color: var(--mob-text);
+  caret-color: var(--mob-text);
   border-color: var(--mob-border);
+}
+
+[data-theme="dark"] .mob-search-input::placeholder {
+  color: var(--mob-text-muted);
+}
+
+[data-theme="dark"] .mob-btn-primary {
+  background: var(--mob-purple);
+  border-color: var(--mob-purple-border);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .mob-post-sheet,
+[data-theme="dark"] .mob-post-sheet-header,
+[data-theme="dark"] .mob-post-sheet-body,
+[data-theme="dark"] .mob-post-sheet-footer {
+  background: var(--mob-card) !important;
+  color: var(--mob-text);
+}
+
+[data-theme="dark"] .mob-post-sheet-title {
+  color: var(--mob-text);
 }
 
 [data-theme="dark"] .mob-chip {

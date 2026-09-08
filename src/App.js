@@ -226,6 +226,8 @@ function ProfileVisaSection() {
 function Profile() {
   const { user, token, refreshUser, logout } = useAuth();
   const [form, setForm] = useState({
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
     nationality: user?.nationality || "",
     currentCity: user?.currentCity || "",
     company: user?.company || "",
@@ -237,6 +239,24 @@ function Profile() {
   const [photoPreview, setPhotoPreview] = useState(user?.profileImage || "");
   const [message, setMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setForm({
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      nationality: user.nationality || "",
+      currentCity: user.currentCity || "",
+      company: user.company || "",
+      interests: user.interests || [],
+      industry: user.industry || "",
+      bio: user.bio || "",
+      profileImage: user.profileImage || "",
+    });
+    setPhotoPreview(user.profileImage || "");
+  }, [user]);
+
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -292,7 +312,8 @@ function Profile() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -305,6 +326,35 @@ function Profile() {
       console.error("Profile update error:", error);
       setMessage(`❌ Error: ${error.message}`);
       setTimeout(() => setMessage(""), 5000);
+    }
+  };
+
+  const deleteAccount = async () => {
+    const ok = window.confirm(
+      "Delete your EXPal account permanently? This removes your profile, messages, posts, and documents. This cannot be undone."
+    );
+    if (!ok) return;
+    const typed = window.prompt('Type DELETE to confirm account deletion:');
+    if (typed !== "DELETE") {
+      setMessage("Account deletion cancelled.");
+      setTimeout(() => setMessage(""), 3000);
+      return;
+    }
+    setDeleteBusy(true);
+    setMessage("");
+    try {
+      const res = await fetch(`${API}/api/profile`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not delete account");
+      logout();
+    } catch (err) {
+      setMessage(`❌ ${err.message || "Could not delete account"}`);
+      setTimeout(() => setMessage(""), 5000);
+    } finally {
+      setDeleteBusy(false);
     }
   };
   const handleInterestAdd = (interest) => {
@@ -424,6 +474,19 @@ function Profile() {
             >
               Sign out
             </Button>
+            <div className="pt-2">
+              <p className="text-xs text-muted mb-2">
+                Permanently remove your account and associated data.
+              </p>
+              <Button
+                type="button"
+                variant="danger"
+                disabled={deleteBusy}
+                onClick={deleteAccount}
+              >
+                {deleteBusy ? "Deleting…" : "Delete account"}
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
@@ -494,6 +557,32 @@ function Profile() {
                 onChange={handlePhotoUpload}
                 className="form-input"
                 style={{ maxWidth: "200px" }}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">First name:</label>
+              <input
+                className="form-input"
+                value={form.firstName}
+                onChange={(e) =>
+                  setForm({ ...form, firstName: e.target.value })
+                }
+                placeholder="First name"
+                required
+                autoComplete="given-name"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Last name:</label>
+              <input
+                className="form-input"
+                value={form.lastName}
+                onChange={(e) =>
+                  setForm({ ...form, lastName: e.target.value })
+                }
+                placeholder="Last name"
+                required
+                autoComplete="family-name"
               />
             </div>
             <div className="form-group">

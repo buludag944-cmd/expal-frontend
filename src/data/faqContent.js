@@ -241,7 +241,7 @@ export const FAQ_CATEGORIES = [
       },
       {
         q: "How do I delete my account or data?",
-        a: "Contact the founder via Profile → Contact founder and request deletion. We will process GDPR-style requests manually.",
+        a: "Open Profile → Delete account (or Account settings on mobile). Confirm twice, then type DELETE. This permanently removes your profile and associated data. You can also contact the founder if you need help.",
       },
       {
         q: "Is my email visible to everyone?",

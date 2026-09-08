@@ -56,6 +56,8 @@ export default function MobileProfile() {
   const [themePref, setThemePref] = useState(getStoredThemePreference);
   const [message, setMessage] = useState("");
   const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
     nationality: "",
     currentCity: "",
     company: "",
@@ -68,6 +70,8 @@ export default function MobileProfile() {
   useEffect(() => {
     if (!user) return;
     setForm({
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
       nationality: user.nationality || "",
       currentCity: user.currentCity || user.destinationCity || "",
       company: user.company || "",
@@ -109,7 +113,10 @@ export default function MobileProfile() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error("Could not save profile");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Could not save profile");
+      }
       await refreshUser();
       setMessage("Profile saved");
       setShowEdit(false);
@@ -121,6 +128,32 @@ export default function MobileProfile() {
 
   const handleSignOut = () => {
     if (window.confirm("Sign out of EXPal?")) logout();
+  };
+
+  const deleteAccount = async () => {
+    const ok = window.confirm(
+      "Delete your EXPal account permanently? This removes your profile, messages, posts, and documents. This cannot be undone."
+    );
+    if (!ok) return;
+    const typed = window.prompt("Type DELETE to confirm account deletion:");
+    if (typed !== "DELETE") {
+      setMessage("Account deletion cancelled.");
+      setTimeout(() => setMessage(""), 3000);
+      return;
+    }
+    setMessage("");
+    try {
+      const res = await fetch(`${API}/api/profile`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not delete account");
+      logout();
+    } catch (err) {
+      setMessage(err.message || "Could not delete account");
+      setTimeout(() => setMessage(""), 5000);
+    }
   };
 
   const enableNotifications = async () => {
@@ -231,6 +264,8 @@ export default function MobileProfile() {
           <p className="mob-settings-label">Edit profile</p>
           <form onSubmit={saveProfile} className="mob-settings-card" style={{ padding: 12 }}>
             <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ marginBottom: 8, fontSize: 12 }} />
+            <input className="mob-search-input" placeholder="First name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required autoComplete="given-name" style={{ marginBottom: 8 }} />
+            <input className="mob-search-input" placeholder="Last name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required autoComplete="family-name" style={{ marginBottom: 8 }} />
             <input className="mob-search-input" placeholder="Nationality" value={form.nationality} onChange={(e) => setForm({ ...form, nationality: e.target.value })} style={{ marginBottom: 8 }} />
             <input className="mob-search-input" placeholder="Current city" value={form.currentCity} onChange={(e) => setForm({ ...form, currentCity: e.target.value })} style={{ marginBottom: 8 }} />
             <input className="mob-search-input" placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} style={{ marginBottom: 8 }} />
@@ -354,6 +389,9 @@ export default function MobileProfile() {
 
       <button type="button" className="mob-sign-out" onClick={handleSignOut}>
         Sign out
+      </button>
+      <button type="button" className="mob-delete-account" onClick={deleteAccount}>
+        Delete account
       </button>
       <p className="mob-version">EXPal · Built with ♥ for expats</p>
 

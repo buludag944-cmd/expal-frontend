@@ -148,11 +148,14 @@ async function registerCurrentToken(authToken) {
     };
   }
   const result = await postTokenToBackend(token, authToken);
+  // Always log so Xcode / Safari Web Inspector can capture it for Firebase Console tests.
+  console.info("[PUSH_FCM_TOKEN]", token);
   return {
     granted: true,
     registered: result.ok,
     reason: result.ok ? "ok" : "register_failed",
     detail: result.error,
+    fcmToken: token,
   };
 }
 

@@ -56,6 +56,7 @@ export default function MobileProfile() {
   const [contactStatus, setContactStatus] = useState("");
   const [themePref, setThemePref] = useState(getStoredThemePreference);
   const [message, setMessage] = useState("");
+  const [fcmTokenDebug, setFcmTokenDebug] = useState("");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -160,8 +161,9 @@ export default function MobileProfile() {
   const enableNotifications = async () => {
     setMessage("");
     const result = await setupPushNotifications(token);
+    if (result.fcmToken) setFcmTokenDebug(result.fcmToken);
     if (result.granted && result.registered) {
-      setMessage("Push enabled. Lock your phone, then tap Send test push.");
+      setMessage("Push enabled. Lock your phone, then tap Send test push. FCM token shown below — copy it for Firebase Console.");
     } else if (result.reason === "denied") {
       setMessage("Allow notifications in iPhone Settings → Notifications → EXPal (Lock Screen on)");
     } else if (result.reason === "web") {
@@ -173,19 +175,31 @@ export default function MobileProfile() {
     } else {
       setMessage("Could not enable notifications. Try again after signing in.");
     }
-    setTimeout(() => setMessage(""), 8000);
+    setTimeout(() => setMessage(""), 12000);
   };
 
   const testPush = async () => {
     setMessage("Sending test push…");
     // Refresh token first so APNs is wired before the server sends.
-    await setupPushNotifications(token);
+    const reg = await setupPushNotifications(token);
+    if (reg.fcmToken) setFcmTokenDebug(reg.fcmToken);
     const result = await sendTestPush(token);
     const parts = [result.message];
     if (result.hint) parts.push(result.hint);
     if (result.errors?.[0]?.code) parts.push(`Code: ${result.errors[0].code}`);
     setMessage(parts.filter(Boolean).join(" — "));
     setTimeout(() => setMessage(""), 12000);
+  };
+
+  const copyFcmToken = async () => {
+    if (!fcmTokenDebug) return;
+    try {
+      await navigator.clipboard.writeText(fcmTokenDebug);
+      setMessage("FCM token copied — paste it in Firebase Console → Cloud Messaging → Send test message");
+    } catch {
+      setMessage("Could not copy — long-press the token to select it");
+    }
+    setTimeout(() => setMessage(""), 8000);
   };
 
   const cycleTheme = () => {
@@ -409,9 +423,19 @@ export default function MobileProfile() {
       {user?.isAdmin && token && <MobileAdminSection token={token} />}
 
       {message && !showEdit && (
-        <p style={{ fontSize: 12, margin: "0 16px 8px", color: message.includes("enabled") || message.includes("Theme") || message.includes("saved") ? "#0f6e56" : "#5c5c5c" }}>
+        <p style={{ fontSize: 12, margin: "0 16px 8px", color: message.includes("enabled") || message.includes("Theme") || message.includes("saved") || message.includes("copied") || message.includes("sent") ? "#0f6e56" : "#5c5c5c" }}>
           {message}
         </p>
+      )}
+
+      {fcmTokenDebug && !showEdit && (
+        <div style={{ margin: "0 16px 12px", padding: 12, borderRadius: 12, background: "rgba(0,0,0,0.04)", fontSize: 11, wordBreak: "break-all" }}>
+          <p style={{ margin: "0 0 6px", fontWeight: 600 }}>FCM token (for Firebase Console test)</p>
+          <p style={{ margin: "0 0 8px", fontFamily: "ui-monospace, monospace" }}>{fcmTokenDebug}</p>
+          <button type="button" className="mob-settings-item" style={{ width: "100%", justifyContent: "center" }} onClick={copyFcmToken}>
+            Copy FCM token
+          </button>
+        </div>
       )}
 
       <button type="button" className="mob-sign-out" onClick={handleSignOut}>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../AuthContext";
 import { getApiBaseUrl } from "../../apiConfig";
-import { setupPushNotifications } from "../../lib/pushNotifications";
+import { setupPushNotifications, sendTestPush } from "../../lib/pushNotifications";
 import ProfileAvatar from "../../components/ProfileAvatar";
 import { MobileScreen, MobilePostSheet } from "../../components/mobile/MobileShared";
 import {
@@ -21,6 +21,7 @@ const SETTINGS = [
     items: [
       { emoji: "🪪", label: "Permit & visa details", bg: "#EEEDFE", to: "/journey" },
       { emoji: "🔔", label: "Enable push alerts", bg: "#E1F5EE", action: "notifications" },
+      { emoji: "📲", label: "Send test push", bg: "#FAEEDA", action: "test_push" },
       { emoji: "📬", label: "Notification inbox", bg: "#EEEDFE", to: "/notifications" },
       { emoji: "🔒", label: "Privacy & data", bg: "#FAECE7", to: "/privacy" },
       { emoji: "✏️", label: "Edit profile", bg: "#E6F1FB", action: "edit" },
@@ -160,9 +161,9 @@ export default function MobileProfile() {
     setMessage("");
     const result = await setupPushNotifications(token);
     if (result.granted && result.registered) {
-      setMessage("Push notifications enabled — leave the app and ask someone to DM you to test");
+      setMessage("Push enabled. Lock your phone, then tap Send test push.");
     } else if (result.reason === "denied") {
-      setMessage("Allow notifications in iPhone Settings → Notifications → EXPal");
+      setMessage("Allow notifications in iPhone Settings → Notifications → EXPal (Lock Screen on)");
     } else if (result.reason === "web") {
       setMessage("Push notifications work in the native iOS and Android apps");
     } else if (result.reason === "token_failed" || result.reason === "no_token") {
@@ -172,7 +173,19 @@ export default function MobileProfile() {
     } else {
       setMessage("Could not enable notifications. Try again after signing in.");
     }
-    setTimeout(() => setMessage(""), 5000);
+    setTimeout(() => setMessage(""), 8000);
+  };
+
+  const testPush = async () => {
+    setMessage("Sending test push…");
+    // Refresh token first so APNs is wired before the server sends.
+    await setupPushNotifications(token);
+    const result = await sendTestPush(token);
+    const parts = [result.message];
+    if (result.hint) parts.push(result.hint);
+    if (result.errors?.[0]?.code) parts.push(`Code: ${result.errors[0].code}`);
+    setMessage(parts.filter(Boolean).join(" — "));
+    setTimeout(() => setMessage(""), 12000);
   };
 
   const cycleTheme = () => {
@@ -306,6 +319,20 @@ export default function MobileProfile() {
                     type="button"
                     className="mob-settings-item"
                     onClick={enableNotifications}
+                  >
+                    <span className="mob-settings-icon" style={{ background: item.bg }}>{item.emoji}</span>
+                    <span>{item.label}</span>
+                    <span className="mob-settings-arrow">›</span>
+                  </button>
+                );
+              }
+              if (item.action === "test_push") {
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="mob-settings-item"
+                    onClick={testPush}
                   >
                     <span className="mob-settings-icon" style={{ background: item.bg }}>{item.emoji}</span>
                     <span>{item.label}</span>

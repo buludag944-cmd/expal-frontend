@@ -7,6 +7,7 @@ const PUSH_PROMPTED_KEY = "expal-push-prompted";
 
 let listenersAttached = false;
 let currentAuthToken = null;
+let latestApnsToken = null;
 
 function sleep(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -83,6 +84,11 @@ async function attachPushListeners() {
     }
   });
 
+  await FirebaseMessaging.addListener("apnsTokenReceived", (event) => {
+    latestApnsToken = event?.token || true;
+    console.info("[push] APNs token received");
+  });
+
   await FirebaseMessaging.addListener("notificationReceived", (event) => {
     console.info("[push] received (foreground):", event.notification?.title);
   });
@@ -93,9 +99,26 @@ async function attachPushListeners() {
 }
 
 /**
+ * iOS lock-screen push needs the APNs device token wired into FCM before getToken().
+ */
+async function waitForApnsTokenIfNeeded() {
+  if (Capacitor.getPlatform() !== "ios") return true;
+  if (latestApnsToken) return true;
+
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    if (latestApnsToken) return true;
+    await sleep(400);
+  }
+  console.warn("[push] timed out waiting for APNs token — trying FCM getToken anyway");
+  return false;
+}
+
+/**
  * iOS often needs a short wait after permission + APNs registration before FCM token is ready.
  */
 async function getFcmTokenWithRetry() {
+  await waitForApnsTokenIfNeeded();
   const delaysMs = Capacitor.getPlatform() === "ios" ? [0, 800, 2000, 4000, 7000] : [0, 500, 1500];
   let lastError = null;
   for (const wait of delaysMs) {
@@ -119,7 +142,9 @@ async function registerCurrentToken(authToken) {
       granted: true,
       registered: false,
       reason: error ? "token_failed" : "no_token",
-      detail: error?.message || "FCM token not ready yet. Tap Enable push alerts again in a few seconds.",
+      detail:
+        error?.message ||
+        "FCM token not ready yet. Tap Enable push alerts again in a few seconds.",
     };
   }
   const result = await postTokenToBackend(token, authToken);
@@ -209,8 +234,40 @@ export async function setupPushNotifications(authToken) {
     /* ignore */
   }
 
-  // After iOS permission grant, APNs registration is async — retry getToken.
+  // After iOS permission grant, APNs registration is async — wait then retry getToken.
   return registerCurrentToken(authToken);
+}
+
+/**
+ * Ask the server to send a test lock-screen notification to this account's devices.
+ */
+export async function sendTestPush(authToken) {
+  if (!authToken) return { ok: false, message: "Not signed in" };
+  const API = getApiBaseUrl();
+  const res = await fetch(`${API}/api/push/test`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return {
+      ok: false,
+      message: data.error || data.message || `Test failed (${res.status})`,
+      hint: data.hint,
+      errors: data.errors,
+    };
+  }
+  return {
+    ok: !!data.ok,
+    message: data.message || (data.ok ? "Test push sent" : "Test push failed"),
+    hint: data.hint,
+    sent: data.sent,
+    failure: data.failure,
+    errors: data.errors,
+  };
 }
 
 export async function unregisterPushDevice(authToken, fcmToken) {

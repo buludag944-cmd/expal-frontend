@@ -148,14 +148,11 @@ async function registerCurrentToken(authToken) {
     };
   }
   const result = await postTokenToBackend(token, authToken);
-  // Always log so Xcode / Safari Web Inspector can capture it for Firebase Console tests.
-  console.info("[PUSH_FCM_TOKEN]", token);
   return {
     granted: true,
     registered: result.ok,
     reason: result.ok ? "ok" : "register_failed",
     detail: result.error,
-    fcmToken: token,
   };
 }
 
@@ -239,38 +236,6 @@ export async function setupPushNotifications(authToken) {
 
   // After iOS permission grant, APNs registration is async — wait then retry getToken.
   return registerCurrentToken(authToken);
-}
-
-/**
- * Ask the server to send a test lock-screen notification to this account's devices.
- */
-export async function sendTestPush(authToken) {
-  if (!authToken) return { ok: false, message: "Not signed in" };
-  const API = getApiBaseUrl();
-  const res = await fetch(`${API}/api/push/test`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      "Content-Type": "application/json",
-    },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return {
-      ok: false,
-      message: data.error || data.message || `Test failed (${res.status})`,
-      hint: data.hint,
-      errors: data.errors,
-    };
-  }
-  return {
-    ok: !!data.ok,
-    message: data.message || (data.ok ? "Test push sent" : "Test push failed"),
-    hint: data.hint,
-    sent: data.sent,
-    failure: data.failure,
-    errors: data.errors,
-  };
 }
 
 export async function unregisterPushDevice(authToken, fcmToken) {

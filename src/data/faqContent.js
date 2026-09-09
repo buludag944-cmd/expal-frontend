@@ -218,7 +218,7 @@ export const FAQ_CATEGORIES = [
       },
       {
         q: "Why am I not getting push notifications?",
-        a: "On iPhone: Profile → Enable push alerts, then Send test push and lock the phone. Also check Settings → Notifications → EXPal → Lock Screen is on. Lock-screen push needs an APNs Authentication Key (.p8) uploaded in Firebase Cloud Messaging for the iOS app.",
+        a: "On iPhone: Profile → Enable push alerts, then allow notifications. Also check Settings → Notifications → EXPal → Lock Screen is on. You’ll get alerts for messages, comments, community activity, and visa reminders when the app is closed.",
       },
       {
         q: "Do notifications mark as read automatically?",

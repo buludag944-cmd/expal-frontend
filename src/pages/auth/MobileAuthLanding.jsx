@@ -2,14 +2,32 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../AuthContext";
 import { useGoogleAuthAction } from "./useGoogleAuthAction";
+import { useAppleAuthAction } from "./useAppleAuthAction";
+import { AppleLogoMark } from "../../lib/appleSignIn";
 import EmailAuthForms from "./EmailAuthForms";
 import "../../styles/auth-landing.css";
 
-/** Mobile sign-in — Google + email create account / sign in. */
+/** Mobile sign-in — Apple (iOS) + Google + email. Apple required for App Store Guideline 4.8. */
 export default function MobileAuthLanding() {
   const { authNotice } = useAuth();
-  const { busy, error, signInWithGoogle, googleConfigured } = useGoogleAuthAction();
+  const {
+    busy: googleBusy,
+    error: googleError,
+    setError: setGoogleError,
+    signInWithGoogle,
+    googleConfigured,
+  } = useGoogleAuthAction();
+  const {
+    busy: appleBusy,
+    error: appleError,
+    setError: setAppleError,
+    signInWithApple,
+    appleAvailable,
+  } = useAppleAuthAction();
   const [emailMode, setEmailMode] = useState(null); // null | "signin" | "signup"
+
+  const busy = googleBusy || appleBusy;
+  const error = appleError || googleError;
 
   useEffect(() => {
     document.documentElement.classList.add("auth-native-shell");
@@ -52,15 +70,36 @@ export default function MobileAuthLanding() {
         {authNotice && <div className="auth-landing-notice">{authNotice}</div>}
         {error && <div className="auth-landing-error">{error}</div>}
 
+        {/* Equal prominence: Apple first on iOS (Guideline 4.8), then Google */}
+        {appleAvailable && (
+          <button
+            type="button"
+            className="auth-landing-apple-btn"
+            style={{ marginTop: "0.5rem" }}
+            disabled={busy}
+            onClick={() => {
+              setGoogleError("");
+              signInWithApple();
+            }}
+            aria-label="Sign in with Apple"
+          >
+            <AppleLogoMark size={18} color="#fff" />
+            {appleBusy ? "Signing in…" : "Sign in with Apple"}
+          </button>
+        )}
+
         <button
           type="button"
           className="auth-landing-social-btn"
-          style={{ marginTop: "0.5rem" }}
+          style={{ marginTop: appleAvailable ? 0 : "0.5rem" }}
           disabled={busy || !googleConfigured}
-          onClick={() => signInWithGoogle()}
+          onClick={() => {
+            setAppleError("");
+            signInWithGoogle();
+          }}
         >
           <span className="auth-landing-social-icon">G</span>
-          {busy ? "Signing in…" : "Continue with Google"}
+          {googleBusy ? "Signing in…" : "Continue with Google"}
         </button>
 
         {!googleConfigured && (

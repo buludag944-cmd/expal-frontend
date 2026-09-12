@@ -281,6 +281,81 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithApple = async (idToken, extras = {}) => {
+    const url = `${API}/api/auth/apple`;
+    const unreachable = isNativeApp()
+      ? BACKEND_UNREACHABLE_NATIVE
+      : isLocalApiBase(API)
+        ? BACKEND_UNREACHABLE_LOCAL
+        : BACKEND_UNREACHABLE_REMOTE(API);
+
+    const postOnce = async () => {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idToken,
+          firstName: extras.firstName || undefined,
+          lastName: extras.lastName || undefined,
+          appleUserId: extras.appleUserId || undefined,
+        }),
+      });
+      const data = await parseJsonSafe(res);
+      return { res, data };
+    };
+
+    try {
+      if (!isLocalApiBase(API)) {
+        await fetch(`${API}/health`).catch(() => {});
+      }
+
+      let { res, data } = await postOnce();
+      if (!res.ok && (res.status >= 500 || res.status === 502 || res.status === 503 || res.status === 504)) {
+        await new Promise((r) => setTimeout(r, 2500));
+        ({ res, data } = await postOnce());
+      }
+
+      if (data.token && data.user?.id) {
+        await applySession(data.token, data.user);
+        return { success: true };
+      }
+      if (res.status === 404) {
+        return {
+          success: false,
+          error:
+            "Server update required: API missing POST /api/auth/apple. Redeploy the backend on Render.",
+        };
+      }
+      if (res.status === 503) {
+        return {
+          success: false,
+          error:
+            data.error ||
+            "Apple sign-in is not configured on the server. Add FIREBASE_SERVICE_ACCOUNT_JSON on Render and enable Apple in Firebase Auth.",
+        };
+      }
+      return {
+        success: false,
+        error: data.error || `Sign in with Apple failed (${res.status})`,
+      };
+    } catch {
+      try {
+        await new Promise((r) => setTimeout(r, 2000));
+        const { res, data } = await postOnce();
+        if (data.token && data.user?.id) {
+          await applySession(data.token, data.user);
+          return { success: true };
+        }
+        return {
+          success: false,
+          error: data.error || `Sign in with Apple failed (${res.status})`,
+        };
+      } catch {
+        return { success: false, error: unreachable };
+      }
+    }
+  };
+
   const login = async (email, password) => {
     try {
       const res = await fetch(`${API}/api/login`, {
@@ -369,6 +444,7 @@ export const AuthProvider = ({ children }) => {
         authBlocking,
         login,
         loginWithGoogle,
+        loginWithApple,
         register,
         logout,
         authNotice,

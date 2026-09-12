@@ -5,6 +5,10 @@
 	<!-- Debug / Xcode installs use development APNs -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:expalapp.netlify.app</string>

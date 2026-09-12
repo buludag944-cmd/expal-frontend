@@ -14,7 +14,7 @@ export const FAQ_CATEGORIES = [
       },
       {
         q: "How do I sign up or log in?",
-        a: "On the welcome screen you can Continue with Google (Firebase), or use Sign in / Create account with email and password. Google accounts must keep using Google — they do not have a separate password. Email signups may need to verify via the link we send before logging in.",
+        a: "On the welcome screen you can Sign in with Apple (iPhone), Continue with Google (Firebase), or use Sign in / Create account with email and password. Google and Apple accounts must keep using that same method — they do not have a separate password. Email signups may need to verify via the link we send before logging in.",
       },
       {
         q: "Why does Google sign-in fail on my phone?",

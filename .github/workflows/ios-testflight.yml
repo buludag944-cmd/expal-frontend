@@ -212,34 +212,29 @@ jobs:
             Array(candidate.certificates).map(&:id).include?(cert_id)
           end
 
-          profile = matching.find { |candidate| candidate.name == desired_name } || matching.first
-          action = nil
-
-          if profile && matching.size > 1
-            matching.reject { |candidate| candidate.id == profile.id }.each do |dup|
-              delete_profile.call(dup, "duplicate for cert #{cert_id}")
+          # Always recreate App Store profile so new App ID capabilities
+          # (e.g. Sign In with Apple) are included — stale reuse caused archive failures.
+          (matching + fetch_profiles.call.select { |p| p.name == desired_name || p.name.start_with?("#{desired_name} ") })
+            .uniq { |p| p.id }
+            .each do |old|
+              delete_profile.call(old, "refresh profile for latest App ID capabilities")
             end
+
+          taken = Spaceship::ConnectAPI::Profile.all(filter: { name: desired_name })
+            .find { |candidate| candidate.name == desired_name }
+          if taken
+            delete_profile.call(taken, "name '#{desired_name}' still occupied")
           end
 
-          if profile
-            action = "reused"
-            puts "Reusing existing profile '#{profile.name}' (#{profile.id}) for cert #{cert_id}"
-          else
-            taken = Spaceship::ConnectAPI::Profile.all(filter: { name: desired_name })
-              .find { |candidate| candidate.name == desired_name }
-            if taken
-              delete_profile.call(taken, "name '#{desired_name}' occupied without matching cert")
-            end
-            puts "Creating App Store profile '#{desired_name}' with cert #{cert_id}"
-            profile = Spaceship::ConnectAPI::Profile.create(
-              name: desired_name,
-              profile_type: profile_type,
-              bundle_id_id: bundle.id,
-              certificate_ids: [cert_id],
-              device_ids: []
-            )
-            action = "created"
-          end
+          puts "Creating App Store profile '#{desired_name}' with cert #{cert_id}"
+          profile = Spaceship::ConnectAPI::Profile.create(
+            name: desired_name,
+            profile_type: profile_type,
+            bundle_id_id: bundle.id,
+            certificate_ids: [cert_id],
+            device_ids: []
+          )
+          action = "created"
 
           abort("Profile has no profileContent") if profile.profile_content.to_s.empty?
           File.binwrite(out_path, Base64.decode64(profile.profile_content))

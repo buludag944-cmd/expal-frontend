@@ -10,6 +10,8 @@ import { useAuth } from "../AuthContext";
 export default function PublicSiteHeader({ variant = "light", signInTo = "/#sign-in" }) {
   const dark = variant === "dark";
   const { user } = useAuth() || {};
+  const appStoreUrl =
+    "https://apps.apple.com/app/expal-app-ireland-expat-guide/id6807468477";
 
   return (
     <header className={`public-site-header ${dark ? "is-dark" : "is-light"}`}>
@@ -23,18 +25,24 @@ export default function PublicSiteHeader({ variant = "light", signInTo = "/#sign
         </div>
       </Link>
       <nav className="public-site-nav" aria-label="Public">
-        <a href="/#features">Features</a>
-        <a href="/#blog">Blog</a>
-        <Link to="/employment-support">Guides</Link>
+        <Link to="/">Home</Link>
+        <Link to="/blog">Blog</Link>
+        <Link to="/job-tracker">Job tracker</Link>
         {user ? (
           <Link to="/" className="public-site-cta">
             Open app
           </Link>
         ) : (
-          <Link to={signInTo} className="public-site-cta">
-            Sign in
-          </Link>
+          <Link to={signInTo}>Sign in</Link>
         )}
+        <a
+          href={appStoreUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="public-site-cta"
+        >
+          Download
+        </a>
       </nav>
     </header>
   );

@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Bell,
+  BriefcaseBusiness,
   Compass,
   Home,
   LogOut,
@@ -28,6 +29,7 @@ const navItems = [
   { to: "/explore", label: "Explore", icon: Compass },
   { to: "/community", label: "Community", icon: Users },
   { to: "/journey", label: "Journey", icon: Map },
+  { to: "/job-tracker", label: "Job tracker", icon: BriefcaseBusiness },
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/notifications", label: "Alerts", icon: Bell },
   { to: "/profile", label: "Profile", icon: User },
@@ -139,6 +141,13 @@ export default function AppShell({ children, guest = false, guestSubtitle }) {
             <ThemeToggle onHeader mode="cycle" />
             {!guest && user && (
               <>
+                <Link
+                  to="/job-tracker"
+                  className="inline-flex md:hidden h-11 w-11 items-center justify-center rounded-xl text-white/90 hover:bg-white/15"
+                  aria-label="Job tracker"
+                >
+                  <BriefcaseBusiness className="h-5 w-5" />
+                </Link>
                 <Link
                   to="/notifications"
                   className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-white/90 hover:bg-white/15"

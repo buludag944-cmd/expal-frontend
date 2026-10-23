@@ -24,6 +24,7 @@ import Privacy from "./pages/Privacy";
 import DeleteAccount from "./pages/DeleteAccount";
 import ChildSafetyStandards from "./pages/ChildSafetyStandards";
 import EmploymentSupport from "./pages/EmploymentSupport";
+import JobTracker from "./pages/JobTracker";
 import Referrals from "./pages/Referrals";
 import CommentsSection from "./components/CommentsSection";
 import Button from "./components/ui/Button";
@@ -1307,6 +1308,7 @@ function MainApp() {
           <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/child-safety" element={<ChildSafetyStandards />} />
           <Route path="/employment-support" element={<EmploymentSupport />} />
+          <Route path="/job-tracker" element={<JobTracker />} />
           <Route path="*" element={<AuthEntry />} />
         </Routes>
       </Router>
@@ -1347,6 +1349,7 @@ function MainApp() {
             <Route path="/delete-account" element={<DeleteAccount />} />
             <Route path="/child-safety" element={<ChildSafetyStandards />} />
             <Route path="/employment-support" element={<EmploymentSupport />} />
+            <Route path="/job-tracker" element={<JobTracker />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/" element={<Home />} />
             <Route path="/explore" element={<Explore />} />

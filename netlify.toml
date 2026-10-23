@@ -3,6 +3,12 @@
   command = "node scripts/ensure-logo.js && npm run build"
   publish = "build"
 
+# Prefer static tracker assets over the SPA fallback when a file exists.
+[[redirects]]
+  from = "/tools/job-tracker/*"
+  to = "/tools/job-tracker/:splat"
+  status = 200
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

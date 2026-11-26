@@ -16,6 +16,7 @@ import {
   MobilePostSheet,
 } from "../../components/mobile/MobileShared";
 import { useLocalTabSwipe } from "../../hooks/useSwipeNav";
+import OfficialSources from "../../components/OfficialSources";
 
 const TABS = ["tracker", "guide", "docs"];
 const DOC_TYPES = ["Employment Permit", "IRP Card", "PPS Number", "Passport", "Bank Letter", "Other"];
@@ -173,6 +174,7 @@ export default function MobileVisaTracker() {
       {taskError && (
         <p style={{ color: "#a32d2d", fontSize: 12, margin: "0 0 12px" }}>{taskError}</p>
       )}
+      <OfficialSources />
 
       {tab === "tracker" && (
         <>

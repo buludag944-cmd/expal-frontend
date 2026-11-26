@@ -1,2 +1,3 @@
+/sitemap.xml  https://expalapp-1.onrender.com/api/blog/sitemap.xml  200
 /tools/job-tracker/*  /tools/job-tracker/:splat  200
 /*    /index.html   200

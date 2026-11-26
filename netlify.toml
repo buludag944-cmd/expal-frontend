@@ -5,6 +5,12 @@
 
 # Prefer static tracker assets over the SPA fallback when a file exists.
 [[redirects]]
+  from = "/sitemap.xml"
+  to = "https://expalapp-1.onrender.com/api/blog/sitemap.xml"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/tools/job-tracker/*"
   to = "/tools/job-tracker/:splat"
   status = 200

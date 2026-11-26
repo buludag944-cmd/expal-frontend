@@ -107,7 +107,21 @@ jobs:
           ./gradlew bundleRelease --no-daemon
           test -f app/build/outputs/bundle/release/app-release.aab
 
+      - name: Check whether Play upload is set up
+        id: play
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PLAY_SERVICE_ACCOUNT_JSON}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "PLAY_SERVICE_ACCOUNT_JSON is not set. The signed app file will be saved on this run."
+          fi
+
       - name: Upload to Play internal testing
+        if: steps.play.outputs.configured == 'true'
         uses: r0adkll/upload-google-play@v1.1.4
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -117,6 +131,15 @@ jobs:
           status: completed
           changesNotSentForReview: true
           whatsNewDirectory: ${{ hashFiles('fastlane/metadata/android/whatsnew-en-US') != '' && 'fastlane/metadata/android' || '' }}
+
+      - name: Save the signed app for a manual upload
+        if: steps.play.outputs.configured != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: expal-android-internal
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 14
+          if-no-files-found: error
 
       - name: Delete signing files
         if: always()

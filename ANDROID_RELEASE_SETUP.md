@@ -35,7 +35,15 @@ If you cannot find the file: Play Console → your app → **Test and release** 
 4. Open it, select all of the text, and paste it into the secret `GOOGLE_SERVICES_JSON`.
 5. Delete the downloaded file from your phone or computer when you are done. Do not commit it.
 
-## 3. A free Play upload account
+## 3. Play upload account (you can skip this)
+
+GitHub can sign the Android app without this account. If the secret `PLAY_SERVICE_ACCOUNT_JSON` is empty, the signed app file is saved on the Actions run as `expal-android-internal`. Download that file and upload it yourself:
+
+1. Play Console → **Test and release** → **Internal testing** → **Create new release**.
+2. Upload the `.aab` file.
+3. Leave it on internal testing. Do not promote it until you have installed it and tried it.
+
+Add the secret later only if you want GitHub to upload that file for you:
 
 1. Open [Google Cloud](https://console.cloud.google.com/) → **IAM & Admin** → **Service accounts** → **Create service account**. Name it `expal-play-upload`. You do not need to give it Cloud roles.
 2. Open that account → **Keys** → **Add key** → **JSON**. A file downloads.
@@ -56,9 +64,9 @@ Also copy the **SHA-1** on that same certificate into Firebase → Android app �
 
 ## 5. Try one internal build
 
-After the secrets are saved: GitHub → **Actions** → **Android Play internal** → **Run workflow**.
+After the keystore secrets are saved: GitHub → **Actions** → **Android Play internal** → **Run workflow**.
 
-Then Play Console → **Test and release** → **Internal testing**. A new build should appear. Do not tap **Promote to production**.
+If `PLAY_SERVICE_ACCOUNT_JSON` is saved, Play Console → **Test and release** → **Internal testing** shows the new build. If that secret was skipped, open the finished Actions run, download `expal-android-internal`, and upload that file on the same Internal testing page. Do not tap **Promote to production**.
 
 ## What this costs
 

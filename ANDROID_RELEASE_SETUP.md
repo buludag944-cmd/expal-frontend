@@ -64,4 +64,4 @@ Then Play Console → **Test and release** → **Internal testing**. A new build
 
 GitHub’s free plan includes 2,000 minutes a month on a private repo. An Android build uses a normal Linux machine, about one billed minute per minute it runs.
 
-The iPhone build uses a Mac. GitHub counts Mac minutes at about 10 times the clock time. A 30-minute iPhone build is about 300 billed minutes. The iPhone job stops after 60 minutes. The plan builds phones every two weeks, not on every code change, so two releases a month stay inside the free allowance. You can see usage under GitHub → **Settings** → **Billing and plans**.
+The iPhone build uses a Mac. GitHub counts Mac minutes at about 10 times the clock time. A 30-minute iPhone build is about 300 billed minutes. The iPhone job stops after 60 minutes, so one release is at most about 600 billed minutes. The plan builds phones every two weeks, not on every code change, so two releases a month stay inside the free allowance. An iPhone build starts only from an `ios-*` tag (the release train), not when ordinary code is pushed. You can see usage under GitHub → **Settings** → **Billing and plans**.

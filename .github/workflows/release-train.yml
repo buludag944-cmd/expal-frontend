@@ -1,0 +1,50 @@
+name: Release train
+
+on:
+  schedule:
+    # Every Monday 08:00 UTC, one hour after the what's-new post.
+    # The script publishes on even ISO weeks. Run workflow releases now.
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+  actions: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Prepare the release
+        id: plan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CROSS_REPO_READ_TOKEN: ${{ secrets.CROSS_REPO_READ_TOKEN }}
+          RELEASE_FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
+        run: node scripts/release-train.js
+      - name: Commit, tag, and start the store builds
+        if: steps.plan.outputs.release == 'yes'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "EXPal"
+          git config user.email "editorial@expal.invalid"
+          git add android/app/build.gradle ios/App/App.xcodeproj/project.pbxproj fastlane
+          git commit -m "Release ${VERSION} [skip ci]"
+          git push origin HEAD:main
+          git tag "ios-${VERSION}"
+          git tag "android-${VERSION}"
+          git push origin "ios-${VERSION}" "android-${VERSION}"
+          # A [skip ci] commit does not start tag workflows, so start them here.
+          gh workflow run "iOS TestFlight" --ref "ios-${VERSION}"
+          gh workflow run "Android Play internal" --ref "android-${VERSION}"

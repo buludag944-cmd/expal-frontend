@@ -5,12 +5,63 @@ import PublicSiteHeader from "../components/PublicSiteHeader";
 import Seo from "../components/Seo";
 import { MobileScreen } from "../components/mobile/MobileShared";
 import { isNativeApp } from "../lib/platform";
-import { LEVEL_COPY, QUESTIONS, SAFETY_STEPS, SOURCES, analyzeListing } from "../lib/rentalScamCheck";
+import {
+  LEVEL_COPY,
+  PHOTO_CHECK_URL,
+  QUESTIONS,
+  SAFETY_STEPS,
+  SOURCES,
+  advertSearchUrl,
+  analyzeListing,
+  phoneReportSearchUrl,
+} from "../lib/rentalScamCheck";
 import "../styles/public-marketing.css";
 import "../styles/scam-checker.css";
 
+function QuickChecks({ text, phone }) {
+  const advertUrl = advertSearchUrl(text);
+  const phoneUrl = phoneReportSearchUrl(phone);
+  return (
+    <section className="scam-quick" aria-labelledby="scam-quick-title">
+      <h2 id="scam-quick-title">Quick online checks</h2>
+      <p className="scam-hint">
+        One tap each. They open a search in your browser and look for traces of a scam, not for information about a person.
+      </p>
+      <div className="scam-quick-list">
+        <a
+          className={`scam-quick-btn${advertUrl ? "" : " is-disabled"}`}
+          href={advertUrl || undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={!advertUrl}
+          onClick={(e) => !advertUrl && e.preventDefault()}
+        >
+          <strong>Find copies of this advert</strong>
+          <span>{advertUrl ? "Scammers reuse the same text in many fake listings." : "Paste the advert text above first."}</span>
+        </a>
+        <a
+          className={`scam-quick-btn${phoneUrl ? "" : " is-disabled"}`}
+          href={phoneUrl || undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={!phoneUrl}
+          onClick={(e) => !phoneUrl && e.preventDefault()}
+        >
+          <strong>Search scam reports for this number</strong>
+          <span>{phoneUrl ? "Looks for the number next to words like scam or fraud." : "Enter the phone number above first."}</span>
+        </a>
+        <a className="scam-quick-btn" href={PHOTO_CHECK_URL} target="_blank" rel="noopener noreferrer">
+          <strong>Check the photos</strong>
+          <span>Upload a listing photo to Google Lens to see if it's copied from elsewhere.</span>
+        </a>
+      </div>
+    </section>
+  );
+}
+
 function Checker() {
   const [text, setText] = useState("");
+  const [phone, setPhone] = useState("");
   const [answers, setAnswers] = useState({});
   const [checked, setChecked] = useState(false);
   const result = useMemo(() => analyzeListing({ text, answers }), [text, answers]);
@@ -23,6 +74,7 @@ function Checker() {
 
   function reset() {
     setText("");
+    setPhone("");
     setAnswers({});
     setChecked(false);
   }
@@ -55,27 +107,45 @@ function Checker() {
             onChange={(e) => setText(e.target.value)}
             placeholder="Paste the listing or the chat with the landlord here…"
           />
-          <span className="scam-hint">Leave out personal details you don't need, like phone numbers or bank details.</span>
+          <span className="scam-hint">Leave out personal details you don't need, like bank details.</span>
         </label>
 
+        <label className="scam-field">
+          <span className="scam-label">The number they're contacting you from (optional)</span>
+          <input
+            className="scam-input"
+            type="tel"
+            inputMode="tel"
+            autoComplete="off"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="e.g. 087 123 4567"
+          />
+          <span className="scam-hint">Only used for the scam-report search below. It isn't saved or sent to EXPal.</span>
+        </label>
+
+        <QuickChecks text={text} phone={phone} />
+
         {QUESTIONS.map((q) => (
-          <fieldset key={q.id} className="scam-question">
-            <legend>{q.label}</legend>
+          <div key={q.id} className="scam-question" role="radiogroup" aria-labelledby={`q-${q.id}`}>
+            <p id={`q-${q.id}`} className="scam-label">
+              {q.label}
+            </p>
             <div className="scam-options">
               {q.options.map((o) => (
-                <label key={o.value} className={`scam-option${answers[q.id] === o.value ? " is-on" : ""}`}>
-                  <input
-                    type="radio"
-                    name={q.id}
-                    value={o.value}
-                    checked={answers[q.id] === o.value}
-                    onChange={() => setAnswer(q.id, o.value)}
-                  />
-                  <span>{o.label}</span>
-                </label>
+                <button
+                  key={o.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={answers[q.id] === o.value}
+                  className={`scam-option${answers[q.id] === o.value ? " is-on" : ""}`}
+                  onClick={() => setAnswer(q.id, o.value)}
+                >
+                  {o.label}
+                </button>
               ))}
             </div>
-          </fieldset>
+          </div>
         ))}
 
         <div className="scam-actions">

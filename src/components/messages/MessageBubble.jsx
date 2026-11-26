@@ -15,6 +15,9 @@ function formatTime(iso) {
  */
 export default function MessageBubble({ message, mine, native, onEdit, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuUp, setMenuUp] = useState(false);
+  const rowRef = useRef(null);
+  const menuRef = useRef(null);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [text, setText] = useState(message.content || "");
@@ -43,9 +46,33 @@ export default function MessageBubble({ message, mine, native, onEdit, onDelete 
     return () => document.removeEventListener("click", close);
   }, [menuOpen]);
 
+  /** Desktop: open the menu below the message, or above it if there isn't room below. */
+  function openMenu() {
+    if (!native && rowRef.current) {
+      const row = rowRef.current.getBoundingClientRect();
+      let el = rowRef.current.parentElement;
+      while (el && el !== document.body) {
+        const oy = getComputedStyle(el).overflowY;
+        if (oy === "auto" || oy === "scroll") break;
+        el = el.parentElement;
+      }
+      const box = el && el !== document.body ? el.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+      const below = box.bottom - row.bottom;
+      const above = row.top - box.top;
+      setMenuUp(below < 170 && above > below);
+    }
+    setMenuOpen(true);
+  }
+
+  useEffect(() => {
+    if (menuOpen && !native && menuRef.current) {
+      menuRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [menuOpen, native]);
+
   function startPress() {
     if (!canAct || !native) return;
-    pressTimer.current = setTimeout(() => setMenuOpen(true), 450);
+    pressTimer.current = setTimeout(() => openMenu(), 450);
   }
   function endPress() {
     clearTimeout(pressTimer.current);
@@ -91,16 +118,17 @@ export default function MessageBubble({ message, mine, native, onEdit, onDelete 
       );
 
   return (
-    <div className={cn("msg-row", mine ? "msg-row--mine" : "msg-row--theirs")}>
-      {canAct && !native && !editing && (
+    <div ref={rowRef} className={cn("msg-row", mine ? "msg-row--mine" : "msg-row--theirs")}>
+      {canAct && !editing && (
         <div className="msg-actions-anchor">
           <button
             type="button"
-            className="msg-more-btn"
+            className={cn("msg-more-btn", native && "msg-more-btn--native")}
             aria-label="Message options"
             onClick={(e) => {
               e.stopPropagation();
-              setMenuOpen((v) => !v);
+              if (menuOpen) setMenuOpen(false);
+              else openMenu();
             }}
           >
             ⋯
@@ -112,10 +140,11 @@ export default function MessageBubble({ message, mine, native, onEdit, onDelete 
         onTouchStart={startPress}
         onTouchEnd={endPress}
         onTouchMove={endPress}
+        onTouchCancel={endPress}
         onContextMenu={(e) => {
           if (canAct) {
             e.preventDefault();
-            setMenuOpen(true);
+            openMenu();
           }
         }}
       >
@@ -164,7 +193,12 @@ export default function MessageBubble({ message, mine, native, onEdit, onDelete 
       {menuOpen &&
         (() => {
           const items = (
-            <div className={cn("msg-menu", native && "msg-menu--sheet")} role="menu" onClick={(e) => e.stopPropagation()}>
+            <div
+              ref={menuRef}
+              className={cn("msg-menu", native ? "msg-menu--sheet" : menuUp ? "msg-menu--up" : "msg-menu--down")}
+              role="menu"
+              onClick={(e) => e.stopPropagation()}
+            >
               {canEdit && onEdit && (
                 <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setEditing(true); }}>
                   Edit

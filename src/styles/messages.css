@@ -53,12 +53,26 @@
     opacity: 1;
   }
 }
+/* Phones: always-visible "⋯" next to your own messages (44px tap area) */
+.msg-more-btn--native {
+  opacity: 1;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  color: var(--mob-text-secondary, #6b6260);
+}
+/* iPhone: stop long-press from selecting text or opening the system callout */
+.mob-msg-bubble--mine {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
 
 /* Options menu */
 .msg-menu {
   position: absolute;
   z-index: 30;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   right: 0;
   min-width: 160px;
   display: flex;
@@ -69,6 +83,11 @@
   color: rgb(var(--ink));
   border: 1px solid rgb(var(--border-soft) / 0.08);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+/* Opens downward by default; upward only when the message is near the bottom */
+.msg-menu--up {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
 .msg-row--theirs .msg-menu {
   right: auto;

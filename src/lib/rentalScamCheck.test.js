@@ -1,4 +1,4 @@
-import { analyzeListing } from "./rentalScamCheck";
+import { advertSearchUrl, analyzeListing, phoneReportSearchUrl } from "./rentalScamCheck";
 
 test("classic scam story is high risk", () => {
   const r = analyzeListing({
@@ -24,4 +24,15 @@ test("normal agent listing has no major warning signs", () => {
 test("a couple of softer signs is medium", () => {
   const r = analyzeListing({ answers: { contact: "social", price: "cheap" } });
   expect(r.level).toBe("medium");
+});
+
+test("quick checks build scam-focused searches only", () => {
+  const ad = advertSearchUrl("Lovely two bed apartment in Rathmines with parking, all bills included, available now for professionals");
+  expect(decodeURIComponent(ad)).toMatch(/q="[^"]+"/);
+  expect(advertSearchUrl("too short")).toBeNull();
+  const ph = decodeURIComponent(phoneReportSearchUrl("087 123 4567"));
+  expect(ph).toContain('"0871234567"');
+  expect(ph).toContain('"+353871234567"');
+  expect(ph).toMatch(/scam OR fraud/);
+  expect(phoneReportSearchUrl("12")).toBeNull();
 });

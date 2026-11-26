@@ -52,18 +52,17 @@
   background: var(--scam-card);
   min-width: 0;
 }
-.scam-label,
-.scam-question legend {
+.scam-label {
   font-weight: 650;
   font-size: 15px;
   line-height: 1.4;
   color: var(--scam-ink);
   padding: 0;
 }
-.scam-question legend {
-  float: left;
+.scam-question .scam-label {
+  margin: 0;
   width: 100%;
-  margin-bottom: 8px;
+  overflow-wrap: anywhere;
 }
 .scam-textarea {
   width: 100%;
@@ -84,7 +83,6 @@
   margin: 0;
 }
 .scam-options {
-  clear: both;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -92,6 +90,12 @@
 .scam-option {
   position: relative;
   display: inline-flex;
+  font: inherit;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-appearance: none;
+  appearance: none;
   align-items: center;
   min-height: 44px;
   padding: 8px 14px;
@@ -104,18 +108,13 @@
   background: transparent;
   max-width: 100%;
 }
-.scam-option input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
 .scam-option.is-on {
   border-color: #c93b55;
   background: rgba(201, 59, 85, 0.1);
   color: #a52f46;
   font-weight: 600;
 }
-.scam-option:focus-within {
+.scam-option:focus-visible {
   outline: 2px solid #c93b55;
   outline-offset: 2px;
 }
@@ -267,4 +266,78 @@
 .housing-scam-callout--web {
   flex-basis: 100%;
   margin: 0;
+}
+
+.scam-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--scam-line);
+  background: transparent;
+  color: var(--scam-ink);
+  font: inherit;
+  font-size: 16px; /* no iPhone zoom */
+}
+.scam-quick {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--scam-line);
+  background: var(--scam-card);
+}
+.scam-quick h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: var(--scam-ink);
+}
+.scam-quick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.scam-quick-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 59, 85, 0.35);
+  text-decoration: none;
+  color: var(--scam-ink);
+}
+.scam-quick-btn strong {
+  color: #c93b55;
+  font-size: 14px;
+}
+.scam-quick-btn span {
+  font-size: 13px;
+  color: var(--scam-muted);
+  line-height: 1.4;
+}
+.scam-quick-btn.is-disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Dark mode: brighter selected answers and accents */
+[data-theme="dark"] .scam-option.is-on {
+  color: #ffb3bd;
+  background: rgba(232, 71, 58, 0.2);
+  border-color: #ff8a9b;
+}
+[data-theme="dark"] .scam-quick-btn strong,
+[data-theme="dark"] .scam-kicker,
+[data-theme="dark"] .scam-steps li a,
+[data-theme="dark"] .scam-disclaimer a {
+  color: #ff9aa8 !important;
+}
+
+/* In the apps: keep the last lines clear of the tab bar and the chat button */
+.mob-screen .scam {
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+}
+.mob-screen .scam-actions {
+  padding-right: 76px; /* room for the floating chat button */
 }

@@ -204,3 +204,37 @@ export const SOURCES = [
   { label: "CCPC — rental accommodation scams", href: "https://www.ccpc.ie/consumers/housing/rental-accommodation-scams/" },
   { label: "RTB — tenancy registration check", href: "https://www.rtb.ie/check/index.html" },
 ];
+
+
+// One-tap online checks. They look for traces of the scam (copied adverts, reports about a
+// phone number, reused photos), not for information about a person.
+export function advertSearchUrl(text) {
+  const words = String(text || "")
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/[^\p{L}\p{N}'’ ]+/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length < 6) return null;
+  // A distinctive run of words from the middle of the advert, searched as an exact phrase.
+  const start = Math.min(Math.max(0, Math.floor(words.length / 3)), Math.max(0, words.length - 10));
+  const phrase = words.slice(start, start + 10).join(" ");
+  return `https://www.google.com/search?q=${encodeURIComponent(`"${phrase}"`)}`;
+}
+
+export function normalisePhone(raw) {
+  const digits = String(raw || "").replace(/[^\d+]/g, "");
+  return digits.replace(/(?!^)\+/g, "");
+}
+
+export function phoneReportSearchUrl(raw) {
+  const phone = normalisePhone(raw);
+  const digitCount = phone.replace(/\D/g, "").length;
+  if (digitCount < 7 || digitCount > 15) return null;
+  const variants = new Set([phone]);
+  if (phone.startsWith("+353")) variants.add(`0${phone.slice(4)}`);
+  else if (phone.startsWith("0")) variants.add(`+353${phone.slice(1)}`);
+  const numbers = [...variants].map((v) => `"${v}"`).join(" OR ");
+  return `https://www.google.com/search?q=${encodeURIComponent(`(${numbers}) (scam OR fraud OR fake OR scammer)`)}`;
+}
+
+export const PHOTO_CHECK_URL = "https://lens.google.com/";

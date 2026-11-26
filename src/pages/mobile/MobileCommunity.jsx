@@ -319,7 +319,7 @@ export default function MobileCommunity({ initialTab }) {
                     <p className="mob-event-title">{e.title}</p>
                     <p className="mob-event-loc">📍 {e.location || "TBA"}</p>
                     {e.description && (
-                      <p style={{ fontSize: 12, color: "var(--mob-text-secondary)", margin: "6px 0", lineHeight: 1.4 }}>
+                      <p className="ugc-text" style={{ fontSize: 12, color: "var(--mob-text-secondary)", margin: "6px 0", lineHeight: 1.4 }}>
                         {e.description}
                       </p>
                     )}

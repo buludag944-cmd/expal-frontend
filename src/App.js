@@ -9,6 +9,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import AppShell from "./components/AppShell";
+import "./styles/scam-checker.css";
 import AuthEntry from "./pages/auth/AuthEntry";
 import Home from "./pages/Home";
 import Onboarding from "./pages/Onboarding";
@@ -25,6 +26,7 @@ import DeleteAccount from "./pages/DeleteAccount";
 import ChildSafetyStandards from "./pages/ChildSafetyStandards";
 import EmploymentSupport from "./pages/EmploymentSupport";
 import JobTracker from "./pages/JobTracker";
+import ScamChecker from "./pages/ScamChecker";
 import Referrals from "./pages/Referrals";
 import CommentsSection from "./components/CommentsSection";
 import Button from "./components/ui/Button";
@@ -435,7 +437,7 @@ function Profile() {
                   <p>
                     <strong>Bio:</strong>
                   </p>
-                  <p style={{ color: "#666", lineHeight: 1.5 }}>{form.bio}</p>
+                  <p className="ugc-text" style={{ color: "#666", lineHeight: 1.5 }}>{form.bio}</p>
                 </div>
               )}
             </div>
@@ -889,6 +891,12 @@ function Housing() {
             <h2 className="page-title mt-1">Housing listings</h2>
           </div>
         </div>
+        <Link to="/scam-checker" className="housing-scam-callout housing-scam-callout--web">
+          <span aria-hidden="true">🛡️</span>
+          <span>
+            <strong>Talking to a landlord?</strong> Check the listing for scam warning signs before you pay.
+          </span>
+        </Link>
         <Button
           onClick={() => {
             if (showForm) {
@@ -1000,7 +1008,7 @@ function Housing() {
                     </div>
                   )}
                 </div>
-                {h.description && <p className="text-sm text-muted line-clamp-3">{h.description}</p>}
+                {h.description && <p className="ugc-text text-sm text-muted line-clamp-3">{h.description}</p>}
                 <p className="text-xs text-muted">Posted by {author}</p>
                 <div className="mt-auto border-t border-border pt-4">
                   <CommentsSection targetType="listing" targetId={h.id} apiBase={API} user={user} token={token} />
@@ -1178,7 +1186,7 @@ function EventsWebPage() {
               <p className="text-sm text-muted">
                 {ev.date ? new Date(ev.date).toLocaleString() : "—"}
               </p>
-              {ev.description && <p className="text-sm text-muted line-clamp-3">{ev.description}</p>}
+              {ev.description && <p className="ugc-text text-sm text-muted line-clamp-3">{ev.description}</p>}
               {canModifyEvent(ev) && (
                 <div className="flex gap-2">
                   <Button variant="secondary" size="sm" onClick={() => startEditEvent(ev)}>
@@ -1309,6 +1317,7 @@ function MainApp() {
           <Route path="/child-safety" element={<ChildSafetyStandards />} />
           <Route path="/employment-support" element={<EmploymentSupport />} />
           <Route path="/job-tracker" element={<JobTracker />} />
+          <Route path="/scam-checker" element={<ScamChecker />} />
           <Route path="*" element={<AuthEntry />} />
         </Routes>
       </Router>
@@ -1350,6 +1359,7 @@ function MainApp() {
             <Route path="/child-safety" element={<ChildSafetyStandards />} />
             <Route path="/employment-support" element={<EmploymentSupport />} />
             <Route path="/job-tracker" element={<JobTracker />} />
+            <Route path="/scam-checker" element={<ScamChecker />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/" element={<Home />} />
             <Route path="/explore" element={<Explore />} />

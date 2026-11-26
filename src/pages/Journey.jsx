@@ -498,7 +498,7 @@ export default function Journey() {
                         <p className="text-[10px] font-semibold uppercase text-primary mb-1">Relocation check-in</p>
                       )}
                       <p className="font-medium">{task.title}</p>
-                      <p className="text-sm text-muted mt-1">{task.description}</p>
+                      <p className="ugc-text text-sm text-muted mt-1">{task.description}</p>
                       {task.dueDate && <p className="text-xs mt-1 text-muted">Due {task.dueDate}</p>}
                     </div>
                     <Button

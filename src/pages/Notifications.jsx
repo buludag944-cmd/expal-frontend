@@ -179,7 +179,7 @@ export default function Notifications() {
                 </span>
               </div>
               {n.body ? (
-                <p style={{ margin: 0, fontSize: 13, color: "var(--mob-text-secondary)", lineHeight: 1.4 }}>
+                <p className="ugc-text" style={{ margin: 0, fontSize: 13, color: "var(--mob-text-secondary)", lineHeight: 1.4 }}>
                   {n.body}
                 </p>
               ) : null}

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import React, { useState } from "react";
 import CommentsSection from "../../components/CommentsSection";
 import { getApiBaseUrl } from "../../apiConfig";
@@ -113,6 +114,12 @@ export default function MobileHousing({
       </MobilePostSheet>
 
       <div className="mob-body" style={{ paddingTop: 16 }}>
+        <Link to="/scam-checker" className="housing-scam-callout">
+          <span aria-hidden="true">🛡️</span>
+          <span>
+            <strong>Talking to a landlord?</strong> Check the listing for scam warning signs before you pay.
+          </span>
+        </Link>
         <MobileSectionTitle>{filtered.length} listings found</MobileSectionTitle>
         {filtered.map((h, i) => (
           <article key={h.id} className="mob-prop-card">

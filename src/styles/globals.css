@@ -563,3 +563,12 @@
 .badge-ev, .badge-ho, .badge-rf, .badge-es, .badge-kh, .badge-ms {
   @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
 }
+
+/* User-written text (posts, guides, messages, comments, bios, listings):
+   keep the writer's line breaks and stop long words or links from overflowing. */
+.ugc-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}

@@ -111,7 +111,7 @@ export default function MobileMemberProfile() {
           {profile.bio && (
             <div className="mob-member-profile-bio">
               <p className="mob-section-title">About</p>
-              <p>{profile.bio}</p>
+              <p className="ugc-text">{profile.bio}</p>
             </div>
           )}
 

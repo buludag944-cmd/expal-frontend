@@ -7,9 +7,11 @@ import { MobileScreen, MobileSectionTitle, MobileCard } from "../../components/m
 const LINKS = [
   { id: "events", icon: "📅", bg: "#FAECE7", title: "Events", desc: "Workshops and meetups", to: "/community?tab=Events" },
   { id: "housing", icon: "🏠", bg: "#FAECE7", title: "Housing", desc: "Listings and tips", to: "/housing" },
+  { id: "scamcheck", icon: "🛡️", bg: "#FDECEB", title: "Rental scam checker", desc: "Check a listing before you pay", to: "/scam-checker" },
   { id: "knowhow", icon: "💡", bg: "#E6F1FB", title: "Local Know-How", desc: "Daily life shortcuts", to: "/knowhow" },
   { id: "essentials", icon: "📚", bg: "#E1F5EE", title: "Expat Essentials", desc: "Visa, tax, banking guides", to: "/essentials" },
   { id: "referrals", icon: "💼", bg: "#EEEDFE", title: "Referrals", desc: "Jobs and introductions", to: "/referrals" },
+  { id: "jobtracker", icon: "🗂️", bg: "#E1F5EE", title: "Job tracker", desc: "Track applications and next steps", to: "/job-tracker" },
   { id: "visa", icon: "🪪", bg: "#E6F1FB", title: "Visa & Permit", desc: "Timeline and IRP", to: "/journey" },
 ];
 

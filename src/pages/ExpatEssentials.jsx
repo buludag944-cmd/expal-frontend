@@ -186,7 +186,7 @@ function EssentialDetail({ id }) {
         </div>
       ) : (
         <>
-          <div className="prose prose-sm max-w-none text-foreground mb-4">{post.content}</div>
+          <div className="ugc-text prose prose-sm max-w-none text-foreground mb-4">{post.content}</div>
           {isOwner && (
             <div className="flex gap-2 mb-8">
               <Button size="sm" variant="secondary" onClick={() => setEditing(true)} disabled={busy}>

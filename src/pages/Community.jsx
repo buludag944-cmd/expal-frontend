@@ -116,7 +116,7 @@ export default function Community() {
                     onClick={() => navigate(`/community/thread/${t.id}`)}
                   >
                     <span className="font-medium text-foreground">{t.title}</span>
-                    <span className="block text-xs text-muted mt-1 line-clamp-2">{t.body}</span>
+                    <span className="ugc-text block text-xs text-muted mt-1 line-clamp-2">{t.body}</span>
                   </FeedCard>
                 ))}
               </div>

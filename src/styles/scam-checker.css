@@ -1,0 +1,270 @@
+/* Rental scam checker — responsive for web, Android and iPhone; light and dark. */
+.scam {
+  --scam-ink: rgb(var(--ink, 26 18 16));
+  --scam-muted: rgb(var(--ink-soft, 140 126 124));
+  --scam-card: rgb(var(--card, 255 255 255));
+  --scam-line: rgb(var(--border-soft, 0 0 0) / 0.1);
+  max-width: 760px;
+  margin: 0 auto;
+  color: var(--scam-ink);
+}
+.mob-screen .scam {
+  --scam-ink: var(--mob-text, #1a1210);
+  --scam-muted: var(--mob-text-secondary, #6b6260);
+  --scam-card: var(--mob-card, #fff);
+  --scam-line: var(--mob-border, rgba(0, 0, 0, 0.1));
+}
+.scam-intro h1 {
+  font-family: "Sora", "DM Sans", sans-serif;
+  font-size: clamp(1.6rem, 5vw, 2.3rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0.3rem 0 0.6rem;
+  color: var(--scam-ink);
+}
+.scam-intro p {
+  margin: 0 0 1.25rem;
+  line-height: 1.6;
+  color: var(--scam-muted);
+}
+.scam-kicker {
+  font-size: 0.75rem !important;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c93b55 !important;
+  margin: 0 !important;
+}
+.scam-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.scam-field,
+.scam-question {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--scam-line);
+  border-radius: 16px;
+  background: var(--scam-card);
+  min-width: 0;
+}
+.scam-label,
+.scam-question legend {
+  font-weight: 650;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--scam-ink);
+  padding: 0;
+}
+.scam-question legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 8px;
+}
+.scam-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--scam-line);
+  background: transparent;
+  color: var(--scam-ink);
+  font: inherit;
+  font-size: 16px; /* no iPhone zoom */
+  line-height: 1.5;
+  resize: vertical;
+}
+.scam-hint {
+  font-size: 13px;
+  color: var(--scam-muted);
+  margin: 0;
+}
+.scam-options {
+  clear: both;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.scam-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--scam-line);
+  font-size: 14px;
+  line-height: 1.3;
+  cursor: pointer;
+  color: var(--scam-ink);
+  background: transparent;
+  max-width: 100%;
+}
+.scam-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.scam-option.is-on {
+  border-color: #c93b55;
+  background: rgba(201, 59, 85, 0.1);
+  color: #a52f46;
+  font-weight: 600;
+}
+.scam-option:focus-within {
+  outline: 2px solid #c93b55;
+  outline-offset: 2px;
+}
+.scam-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.scam-btn-primary {
+  min-height: 48px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e8473a, #c93b55);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.scam-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.scam-btn-link {
+  min-height: 44px;
+  border: none;
+  background: none;
+  color: var(--scam-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.scam-result {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--scam-line);
+  scroll-margin-top: 80px;
+}
+.scam-result--high {
+  background: #fdeceb;
+  border-color: #f2b8b2;
+}
+.scam-result--medium {
+  background: #fff6e5;
+  border-color: #f3d29a;
+}
+.scam-result--low {
+  background: #e9f7f1;
+  border-color: #a9dcc6;
+}
+.scam-level {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+.scam-result--high .scam-level { color: #b3261e; }
+.scam-result--medium .scam-level { color: #8a5a00; }
+.scam-result--low .scam-level { color: #0f6e56; }
+.scam-summary {
+  margin: 6px 0 0;
+  line-height: 1.55;
+  color: #2c2422;
+}
+.scam-flags {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scam-flag {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.75);
+  border-left: 4px solid #e0a72e;
+  color: #2c2422;
+  line-height: 1.5;
+  font-size: 14px;
+}
+.scam-flag--w3 { border-left-color: #d9342b; }
+.scam-flag--w1 { border-left-color: #8c7e7c; }
+.scam-steps {
+  margin-top: 24px;
+}
+.scam-steps h2 {
+  font-size: 1.2rem;
+  margin: 0 0 10px;
+  color: var(--scam-ink);
+}
+.scam-steps ol {
+  margin: 0;
+  padding-left: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scam-steps li {
+  line-height: 1.5;
+  color: var(--scam-ink);
+}
+.scam-steps li strong,
+.scam-steps li span,
+.scam-steps li a {
+  display: block;
+}
+.scam-steps li span {
+  color: var(--scam-muted);
+  font-size: 14px;
+}
+.scam-steps li a,
+.scam-disclaimer a {
+  color: #c93b55;
+  font-weight: 600;
+  font-size: 14px;
+}
+.scam-disclaimer {
+  margin: 20px 0 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--scam-muted);
+}
+.public-page .scam {
+  padding-top: 8px;
+}
+
+/* "Check a listing" link on the Housing screens */
+.housing-scam-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fdeceb;
+  border: 1px solid #f2c4be;
+  color: #5a1f1a;
+  font-size: 14px;
+  line-height: 1.45;
+  text-decoration: none;
+}
+.housing-scam-callout strong {
+  color: #a52f46;
+}
+.housing-scam-callout--web {
+  flex-basis: 100%;
+  margin: 0;
+}

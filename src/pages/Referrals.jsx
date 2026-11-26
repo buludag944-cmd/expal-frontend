@@ -206,7 +206,7 @@ export default function Referrals() {
                   <span className="badge-rf">{r.category || r.profession || "General"}</span>
                 </div>
                 <h3 className="text-lg font-semibold">{r.title || r.name}</h3>
-                <p className="text-sm text-muted line-clamp-4">{r.description || r.message}</p>
+                <p className="ugc-text text-sm text-muted line-clamp-4">{r.description || r.message}</p>
                 {r.company && (
                   <p className="text-xs text-muted">Company: {r.company}</p>
                 )}

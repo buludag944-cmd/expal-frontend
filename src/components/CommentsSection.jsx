@@ -258,7 +258,7 @@ export default function CommentsSection({
               </div>
             ) : (
               <>
-                <p className={mobile ? "mt-1" : "mt-1 text-foreground"} style={mobile ? { margin: "4px 0 0", lineHeight: 1.45 } : undefined}>{c.content}</p>
+                <p className={mobile ? "ugc-text mt-1" : "ugc-text mt-1 text-foreground"} style={mobile ? { margin: "4px 0 0", lineHeight: 1.45 } : undefined}>{c.content}</p>
                 {editable && token && (
                   <div className="flex gap-2 mt-2">
                     {mobile ? (

@@ -1,0 +1,270 @@
+/* Messages: bubbles, edit/delete, composer. Works on web, Android and iPhone, light and dark. */
+
+.msg-row {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  width: 100%;
+}
+.msg-row--mine {
+  justify-content: flex-end;
+}
+.msg-row--theirs {
+  justify-content: flex-start;
+}
+
+.msg-content {
+  display: block;
+  line-height: 1.45;
+}
+.msg-bubble-web {
+  min-width: 0;
+}
+.msg-bubble--deleted {
+  opacity: 0.75;
+}
+.msg-deleted-text {
+  font-style: italic;
+}
+
+/* Desktop "⋯" button, shown on hover/focus */
+.msg-actions-anchor {
+  align-self: center;
+  order: -1;
+}
+.msg-more-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: rgb(var(--muted));
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.msg-row:hover .msg-more-btn,
+.msg-more-btn:focus-visible {
+  opacity: 1;
+}
+.msg-more-btn:hover {
+  background: rgb(var(--surface-2));
+}
+@media (hover: none) {
+  .msg-more-btn {
+    opacity: 1;
+  }
+}
+
+/* Options menu */
+.msg-menu {
+  position: absolute;
+  z-index: 30;
+  bottom: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgb(var(--card));
+  color: rgb(var(--ink));
+  border: 1px solid rgb(var(--border-soft) / 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+.msg-row--theirs .msg-menu {
+  right: auto;
+  left: 0;
+}
+.msg-menu button {
+  min-height: 44px;
+  padding: 0 14px;
+  text-align: left;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.msg-menu button:hover {
+  background: rgb(var(--surface-2));
+}
+.msg-menu-danger {
+  color: rgb(var(--danger)) !important;
+  font-weight: 600;
+}
+
+/* Phones: menu as a bottom sheet, thumb-friendly, above the composer and tab bar */
+.msg-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(20, 14, 12, 0.35);
+  animation: msg-fade 0.15s ease-out;
+}
+@keyframes msg-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.msg-menu--sheet {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  top: auto;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 18px;
+  background: var(--mob-card, #fff);
+  color: var(--mob-text, #1a1210);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.25);
+}
+.msg-menu--sheet button {
+  text-align: center;
+  font-size: 17px;
+  min-height: 52px;
+}
+
+/* Inline edit */
+.msg-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: min(240px, 60vw);
+}
+.msg-edit-input {
+  width: 100%;
+  resize: none;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 16px; /* 16px stops iPhone from zooming in */
+  min-height: 88px;
+  color: #1a1210;
+  background: #fff;
+}
+.msg-edit-actions,
+.msg-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.msg-confirm {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+}
+.msg-row--theirs .msg-confirm {
+  border-top-color: rgba(0, 0, 0, 0.1);
+}
+.msg-link-btn,
+.msg-save-btn,
+.msg-danger-btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.msg-link-btn {
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+}
+.msg-save-btn {
+  background: #fff;
+  color: #26215c;
+}
+.msg-danger-btn {
+  background: #d9342b;
+  color: #fff;
+}
+.msg-error {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffd7d3;
+}
+.msg-row--theirs .msg-error,
+.msg-composer-error {
+  color: rgb(var(--danger));
+}
+
+/* Composer */
+.msg-composer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.msg-composer--web {
+  padding: 12px 16px;
+  border-top: 1px solid rgb(var(--border-soft) / 0.08);
+}
+.msg-composer-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  max-height: 150px;
+  padding: 11px 14px;
+  border-radius: 22px;
+  border: 1px solid rgb(var(--border-soft) / 0.15);
+  background: rgb(var(--surface));
+  color: rgb(var(--ink));
+  font: inherit;
+  font-size: 16px; /* prevents iOS zoom on focus */
+  line-height: 1.35;
+  resize: none;
+  overflow-y: auto;
+}
+.mob-msg-composer .msg-composer-input {
+  background: var(--mob-bg, #f8f7f5);
+  color: var(--mob-text, #1a1210);
+  border-color: var(--mob-border, rgba(0, 0, 0, 0.12));
+}
+.msg-composer-input:focus {
+  outline: 2px solid rgb(var(--primary) / 0.45);
+  outline-offset: 1px;
+}
+.msg-send-btn {
+  flex-shrink: 0;
+  min-height: 44px;
+  min-width: 64px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 22px;
+  background: rgb(var(--primary));
+  color: rgb(var(--primary-fg));
+  font-weight: 700;
+  cursor: pointer;
+}
+.mob-msg-composer .msg-send-btn {
+  background: var(--mob-purple, #534ab7);
+  color: #fff;
+}
+.msg-send-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.msg-composer-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+[data-theme="dark"] .msg-edit-input {
+  background: #2a201e;
+  color: #fff;
+}
+[data-theme="dark"] .msg-save-btn {
+  background: #fff;
+}

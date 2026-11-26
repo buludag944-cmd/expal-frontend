@@ -5,13 +5,16 @@ import { useAuth } from "../AuthContext";
 import { getApiBaseUrl } from "../apiConfig";
 import Avatar from "../components/ui/Avatar";
 import Badge from "../components/ui/Badge";
-import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import { Card } from "../components/ui/Card";
 import { cn } from "../lib/cn";
 import { markMessageNotificationsRead } from "../lib/notificationsApi";
 import { isNativeApp } from "../lib/platform";
 import { MobileScreen } from "../components/mobile/MobileShared";
+import MessageBubble from "../components/messages/MessageBubble";
+import MessageComposer from "../components/messages/MessageComposer";
+import { deleteMessage, editMessage } from "../lib/messagesApi";
+import "../styles/messages.css";
 
 const API = getApiBaseUrl();
 
@@ -251,6 +254,35 @@ export default function Messages() {
     }
   }
 
+  async function handleEditMessage(id, content) {
+    const updated = await editMessage(token, id, content);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === id ? { ...m, ...updated, content: updated.content ?? content, editedAt: updated.editedAt || new Date().toISOString() } : m
+      )
+    );
+    loadThreads();
+  }
+
+  async function handleDeleteMessage(id) {
+    const result = await deleteMessage(token, id);
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, content: "", deletedAt: result.deletedAt || new Date().toISOString() } : m))
+    );
+    loadThreads();
+  }
+
+  const renderMessage = (m) => (
+    <MessageBubble
+      key={m.id}
+      message={m}
+      mine={m.senderId === user.id}
+      native={native}
+      onEdit={handleEditMessage}
+      onDelete={handleDeleteMessage}
+    />
+  );
+
   const selectedThread = threads.find((t) => t.userId === selectedId);
   const displayName = selectedThread ? peerName(selectedThread.peer) : "Conversation";
 
@@ -417,87 +449,25 @@ export default function Messages() {
         ) : messages.length === 0 ? (
           <p style={{ fontSize: 13, color: "var(--mob-text-muted)" }}>No messages yet — say hello below.</p>
         ) : (
-          messages.map((m) => {
-            const mine = m.senderId === user.id;
-            return (
-              <div
-                key={m.id}
-                className={native ? undefined : cn("flex", mine ? "justify-end" : "justify-start")}
-                style={native ? { display: "flex", justifyContent: mine ? "flex-end" : "flex-start" } : undefined}
-              >
-                <div
-                  className={
-                    native
-                      ? `mob-msg-bubble ${mine ? "mob-msg-bubble--mine" : "mob-msg-bubble--theirs"}`
-                      : cn(
-                          "max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
-                          mine
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-surface border border-border text-foreground"
-                        )
-                  }
-                >
-                  {m.content}
-                  <p className={native ? "mob-msg-time" : cn("mt-1 text-xs opacity-70", mine ? "text-right" : "")}>
-                    {m.createdAt
-                      ? new Date(m.createdAt).toLocaleString("en-IE", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : ""}
-                  </p>
-                </div>
-              </div>
-            );
-          })
+          messages.map(renderMessage)
         )}
         <div ref={listBottomRef} />
       </div>
-      <form
-        className={native ? "mob-msg-composer" : "flex flex-col gap-2 border-t border-border p-4 sm:flex-row"}
+      <MessageComposer
+        value={draft}
+        onChange={setDraft}
         onSubmit={handleSend}
-        data-no-route-swipe
-      >
-        <Input
-          className="flex-1"
-          placeholder="Type a message…"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          disabled={sending}
-          aria-label="Message text"
-        />
-        <Button type="submit" loading={sending} disabled={sending || !draft.trim()}>
-          Send
-        </Button>
-        {sendError && <Badge variant="danger">{sendError}</Badge>}
-      </form>
+        sending={sending}
+        native={native}
+        error={sendError}
+      />
     </>
   );
 
   if (native) {
     if (mobileShowChat && selectedId) {
       const composer = (
-        <form className="mob-msg-composer" onSubmit={handleSend} data-no-route-swipe>
-          <input
-            className="mob-search-input"
-            style={{ flex: 1, minHeight: 44 }}
-            placeholder="Type a message…"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            disabled={sending}
-            aria-label="Message text"
-          />
-          <button
-            type="submit"
-            className="mob-btn-primary"
-            style={{ minHeight: 44, padding: "0 16px", flexShrink: 0 }}
-            disabled={sending || !draft.trim()}
-          >
-            {sending ? "…" : "Send"}
-          </button>
-        </form>
+        <MessageComposer value={draft} onChange={setDraft} onSubmit={handleSend} sending={sending} native />
       );
       return (
         <MobileScreen
@@ -528,26 +498,7 @@ export default function Messages() {
             ) : messages.length === 0 ? (
               <p style={{ fontSize: 13, color: "var(--mob-text-muted)" }}>No messages yet — say hello below.</p>
             ) : (
-              messages.map((m) => {
-                const mine = m.senderId === user.id;
-                return (
-                  <div key={m.id} style={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start" }}>
-                    <div className={`mob-msg-bubble ${mine ? "mob-msg-bubble--mine" : "mob-msg-bubble--theirs"}`}>
-                      {m.content}
-                      <p className="mob-msg-time">
-                        {m.createdAt
-                          ? new Date(m.createdAt).toLocaleString("en-IE", {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : ""}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
+              messages.map(renderMessage)
             )}
             {sendError && <Badge variant="danger">{sendError}</Badge>}
             <div ref={listBottomRef} />

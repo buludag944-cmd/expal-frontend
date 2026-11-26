@@ -1,0 +1,35 @@
+/* Phone layout for the EXPal job tracker (Android, iPhone and small browsers).
+   Larger text, 44px tap targets and 16px form fields (no iPhone zoom on focus). */
+@media (max-width: 760px) {
+  body { font-size: 15px; -webkit-text-size-adjust: 100%; }
+  .nav-item { font-size: 13px; padding: 11px 13px; min-height: 44px; }
+  .nav-item .nav-count { font-size: 11px; }
+  .breadcrumb, .private-pill { font-size: 12px; }
+  .eyebrow { font-size: 11px; }
+  h1 { font-size: 26px; max-width: none; }
+  .page-heading p:not(.eyebrow), .focus-title, .focus-description, .section-heading p,
+  .data-intro p, .demo-note, .demo-note button { font-size: 14px; }
+  .stat-label, .stat-foot { font-size: 12px; }
+  .job-title, .action-name { font-size: 15px; }
+  .card-company, .action-company, .due-label, .column-header { font-size: 13px; }
+  .job-location, .card-action, .card-stage, .card-date, .card-tag { font-size: 12px; }
+  .action-list-row > .text-button, .text-button { font-size: 13px; min-height: 44px; }
+  .button, button.button { min-height: 44px; font-size: 14px; }
+  .search-box { height: 44px; }
+  .search-box input, .toolbar select { font-size: 16px; height: 44px; }
+  input, select, textarea { font-size: 16px !important; }
+  label { font-size: 13px; }
+  .board { grid-template-columns: repeat(5, minmax(250px, 82vw)); scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+  .board > * { scroll-snap-align: start; }
+  dialog { width: calc(100% - 24px); max-height: calc(100dvh - 24px); }
+  .toast { left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Inside the EXPal iPhone/Android app: the app already shows a header and tab bar. */
+html.in-app body { background: var(--bg); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html.in-app .sidebar { padding-top: 10px; }
+html.in-app .brand,
+html.in-app .topbar .top-avatar { display: none; }
+html.in-app .sidebar nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+html.in-app .sidebar nav::-webkit-scrollbar { display: none; }
+html.in-app .nav-item { flex-shrink: 0; }

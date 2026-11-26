@@ -280,7 +280,7 @@ export default function MobileVisaTracker() {
                     {task.isCompleted ? "Done" : overdue ? "Overdue" : task.dueDate ? `Due ${task.dueDate}` : "Open"}
                   </span>
                 </div>
-                {task.description && <p className="mob-step-desc">{task.description}</p>}
+                {task.description && <p className="ugc-text mob-step-desc">{task.description}</p>}
                 <div className="mob-step-meta">
                   <button
                     type="button"

@@ -9,6 +9,7 @@ import {
   Map,
   MessageSquare,
   Search,
+  Shield,
   User,
   Users,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const navItems = [
   { to: "/community", label: "Community", icon: Users },
   { to: "/journey", label: "Journey", icon: Map },
   { to: "/job-tracker", label: "Job tracker", icon: BriefcaseBusiness },
+  { to: "/scam-checker", label: "Scam checker", icon: Shield },
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/notifications", label: "Alerts", icon: Bell },
   { to: "/profile", label: "Profile", icon: User },
@@ -141,6 +143,13 @@ export default function AppShell({ children, guest = false, guestSubtitle }) {
             <ThemeToggle onHeader mode="cycle" />
             {!guest && user && (
               <>
+                <Link
+                  to="/messages"
+                  className="inline-flex md:hidden h-11 w-11 items-center justify-center rounded-xl text-white/90 hover:bg-white/15"
+                  aria-label="Messages"
+                >
+                  <MessageSquare className="h-5 w-5" />
+                </Link>
                 <Link
                   to="/job-tracker"
                   className="inline-flex md:hidden h-11 w-11 items-center justify-center rounded-xl text-white/90 hover:bg-white/15"

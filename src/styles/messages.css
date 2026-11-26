@@ -28,7 +28,7 @@
   font-style: italic;
 }
 
-/* Desktop "⋯" button, shown on hover/focus */
+/* "⋯" on your own messages. Always visible so Edit and Delete are easy to find. */
 .msg-actions-anchor {
   align-self: center;
   order: -1;
@@ -38,16 +38,11 @@
   height: 32px;
   border-radius: 999px;
   border: none;
-  background: transparent;
-  color: rgb(var(--muted));
+  background: rgb(var(--surface-2));
+  color: rgb(var(--ink));
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease;
-}
-.msg-row:hover .msg-more-btn,
-.msg-more-btn:focus-visible {
   opacity: 1;
 }
 .msg-more-btn:hover {

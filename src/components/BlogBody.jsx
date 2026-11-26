@@ -1,26 +1,52 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
-function formatInline(text) {
+const SITE_HOSTS = ["expalapp.netlify.app"];
+
+function isInternal(href) {
+  if (href.startsWith("/") && !href.startsWith("//")) return true;
+  try {
+    return SITE_HOSTS.includes(new URL(href).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function internalPath(href) {
+  if (href.startsWith("/")) return href;
+  const u = new URL(href);
+  return `${u.pathname}${u.search}${u.hash}` || "/";
+}
+
+function formatInline(text, keyPrefix = "") {
   const parts = [];
-  const re = /(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g;
+  const re = /(\*\*[^*]+\*\*|\[[^\]]+\]\([^)\s]+\))/g;
   let last = 0;
   let m;
   const s = String(text);
   while ((m = re.exec(s))) {
     if (m.index > last) parts.push(s.slice(last, m.index));
     const token = m[0];
+    const key = `${keyPrefix}${parts.length}`;
     if (token.startsWith("**")) {
-      parts.push(<strong key={parts.length}>{token.slice(2, -2)}</strong>);
+      parts.push(<strong key={key}>{formatInline(token.slice(2, -2), `${key}-`)}</strong>);
     } else {
-      const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-      if (linkMatch) {
+      const linkMatch = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+      const href = linkMatch ? linkMatch[2] : "";
+      if (!linkMatch || !/^(https?:|mailto:|\/|#)/i.test(href)) {
+        parts.push(linkMatch ? linkMatch[1] : token);
+      } else if (isInternal(href) && !href.startsWith("#")) {
         parts.push(
-          <a key={parts.length} href={linkMatch[2]} target="_blank" rel="noopener noreferrer">
+          <Link key={key} to={internalPath(href)}>
+            {linkMatch[1]}
+          </Link>
+        );
+      } else {
+        parts.push(
+          <a key={key} href={href} target="_blank" rel="noopener noreferrer">
             {linkMatch[1]}
           </a>
         );
-      } else {
-        parts.push(token);
       }
     }
     last = m.index + token.length;
@@ -29,23 +55,45 @@ function formatInline(text) {
   return parts.length ? parts : s;
 }
 
-/** Light markdown-ish body renderer (headings, paragraphs, lists, links, bold). */
+function sectionClass(title) {
+  const t = title.toLowerCase();
+  if (t === "sources" || t.startsWith("sources")) return "blog-section blog-section-sources";
+  if (t === "faq" || t.includes("frequently asked")) return "blog-section blog-section-faq";
+  return "blog-section";
+}
+
+function slugifyHeading(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/\*\*|\[|\]\([^)]*\)/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
+ * Light markdown renderer for blog posts:
+ * ## and ### headings, paragraphs, "- " bullets, "1. " numbered lists, **bold**, [links](url).
+ * "## Sources" and "## FAQ" sections get their own styling.
+ */
 export default function BlogBody({ body }) {
   if (!body) return null;
   const lines = String(body).replace(/\r\n/g, "\n").split("\n");
-  const blocks = [];
-  let listItems = [];
+  const sections = [{ title: null, blocks: [] }];
+  let list = null;
+  const current = () => sections[sections.length - 1];
 
   function flushList() {
-    if (!listItems.length) return;
-    blocks.push(
-      <ul key={`ul-${blocks.length}`} className="blog-prose-ul">
-        {listItems.map((t, i) => (
-          <li key={i}>{formatInline(t)}</li>
+    if (!list) return;
+    const Tag = list.ordered ? "ol" : "ul";
+    const k = `l-${sections.length}-${current().blocks.length}`;
+    current().blocks.push(
+      <Tag key={k} className={list.ordered ? "blog-prose-ol" : "blog-prose-ul"}>
+        {list.items.map((t, i) => (
+          <li key={i}>{formatInline(t, `${k}-${i}-`)}</li>
         ))}
-      </ul>
+      </Tag>
     );
-    listItems = [];
+    list = null;
   }
 
   for (const raw of lines) {
@@ -54,27 +102,54 @@ export default function BlogBody({ body }) {
       flushList();
       continue;
     }
-    if (trimmed.startsWith("## ") || trimmed.startsWith("# ")) {
+    let m;
+    if ((m = trimmed.match(/^(#{1,2})\s+(.*)$/))) {
       flushList();
-      const text = trimmed.startsWith("## ") ? trimmed.slice(3) : trimmed.slice(2);
-      blocks.push(
-        <h2 key={`h-${blocks.length}`} className="blog-prose-h2">
-          {formatInline(text)}
-        </h2>
+      sections.push({ title: m[2], blocks: [] });
+      continue;
+    }
+    if ((m = trimmed.match(/^###\s+(.*)$/))) {
+      flushList();
+      current().blocks.push(
+        <h3 key={`h3-${sections.length}-${current().blocks.length}`} className="blog-prose-h3">
+          {formatInline(m[1])}
+        </h3>
       );
       continue;
     }
-    if (trimmed.startsWith("- ")) {
-      listItems.push(trimmed.slice(2));
+    if ((m = trimmed.match(/^[-*]\s+(.*)$/))) {
+      if (list && list.ordered) flushList();
+      if (!list) list = { ordered: false, items: [] };
+      list.items.push(m[1]);
+      continue;
+    }
+    if ((m = trimmed.match(/^\d+[.)]\s+(.*)$/))) {
+      if (list && !list.ordered) flushList();
+      if (!list) list = { ordered: true, items: [] };
+      list.items.push(m[1]);
       continue;
     }
     flushList();
-    blocks.push(
-      <p key={`p-${blocks.length}`} className="blog-prose-p">
+    current().blocks.push(
+      <p key={`p-${sections.length}-${current().blocks.length}`} className="blog-prose-p">
         {formatInline(trimmed)}
       </p>
     );
   }
   flushList();
-  return <div className="blog-prose">{blocks}</div>;
+
+  return (
+    <div className="blog-prose">
+      {sections.map((section, i) =>
+        section.title === null ? (
+          section.blocks.length ? <div key={i}>{section.blocks}</div> : null
+        ) : (
+          <section key={i} className={sectionClass(section.title)} id={slugifyHeading(section.title)}>
+            <h2 className="blog-prose-h2">{formatInline(section.title)}</h2>
+            {section.blocks}
+          </section>
+        )
+      )}
+    </div>
+  );
 }

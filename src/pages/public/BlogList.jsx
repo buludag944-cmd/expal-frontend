@@ -4,18 +4,71 @@ import PublicSiteHeader from "../../components/PublicSiteHeader";
 import Seo from "../../components/Seo";
 import { fetchPublishedPosts } from "../../lib/blogApi";
 import "../../styles/public-marketing.css";
+import "../../styles/blog.css";
 
-function formatDate(iso) {
+export function formatDate(iso, month = "short") {
   if (!iso) return "";
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return new Date(iso).toLocaleDateString("en-IE", { year: "numeric", month, day: "numeric" });
   } catch {
     return "";
   }
+}
+
+export function readingMinutes(post) {
+  if (post?.readingMinutes) return post.readingMinutes;
+  const words = String(post?.body || "").split(/\s+/).filter(Boolean).length;
+  return words ? Math.max(1, Math.round(words / 220)) : null;
+}
+
+export function PostMeta({ post, month = "short" }) {
+  const mins = readingMinutes(post);
+  return (
+    <p className="blog-meta">
+      <time dateTime={post.publishedAt}>{formatDate(post.publishedAt, month)}</time>
+      {mins ? <span>{mins} min read</span> : null}
+    </p>
+  );
+}
+
+export function PostCard({ post, featured = false }) {
+  const category = post.category || (Array.isArray(post.tags) && post.tags[0]) || "";
+  return (
+    <article className={`blog-card2${featured ? " is-featured" : ""}`}>
+      <Link to={`/blog/${post.slug}`} className="blog-card2-media" tabIndex={-1} aria-hidden="true">
+        {post.coverImageUrl ? (
+          <img src={post.coverImageUrl} alt="" loading={featured ? "eager" : "lazy"} width="1200" height="630" />
+        ) : (
+          <span className="blog-card2-placeholder">EXPal</span>
+        )}
+      </Link>
+      <div className="blog-card2-body">
+        {category && <p className="blog-chip">{category}</p>}
+        <h2 className="blog-card2-title">
+          <Link to={`/blog/${post.slug}`}>{post.title}</Link>
+        </h2>
+        {post.excerpt && <p className="blog-card2-excerpt">{post.excerpt}</p>}
+        <PostMeta post={post} />
+      </div>
+    </article>
+  );
+}
+
+function SkeletonGrid() {
+  return (
+    <div className="blog-grid" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="blog-card2 is-skeleton">
+          <div className="blog-card2-media" />
+          <div className="blog-card2-body">
+            <span className="sk sk-chip" />
+            <span className="sk sk-title" />
+            <span className="sk sk-line" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function BlogList() {
@@ -30,7 +83,7 @@ export default function BlogList() {
         if (!cancelled) setPosts(Array.isArray(data) ? data : []);
       })
       .catch(() => {
-        if (!cancelled) setError("Could not load posts. Try again shortly.");
+        if (!cancelled) setError("We couldn't load the articles right now. Please try again in a moment.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -40,54 +93,41 @@ export default function BlogList() {
     };
   }, []);
 
+  const [featured, ...rest] = posts;
+
   return (
-    <div className="public-page">
+    <div className="public-page blog-page">
       <Seo
-        title="Expat Blog"
-        description="Guides for expats on housing, visas, IRP, and settling abroad — from the EXPal team."
+        title="Blog — Guides for your first months in Ireland"
+        description="Practical, source-checked guides for expats moving to Ireland: PPS number, IRP, housing, tax, healthcare and more."
         path="/blog"
+        image={featured?.coverImageUrl}
       />
       <PublicSiteHeader />
-      <main className="public-main">
-        <header className="blog-list-hero">
+      <main className="public-main blog-wrap">
+        <header className="blog-hero">
           <p className="blog-kicker">EXPal Blog</p>
-          <h1>Guides for life abroad</h1>
+          <h1>Guides for your first months in Ireland</h1>
           <p>
-            Practical articles on relocating, housing, visas, and community — written to help you
-            settle with less stress.
+            Step-by-step, source-checked guides on PPS numbers, immigration, housing, tax and healthcare,
+            written to help you settle in with less stress.
           </p>
         </header>
 
-        {loading && <p className="public-muted">Loading posts…</p>}
+        {loading && <SkeletonGrid />}
         {error && <p className="public-error">{error}</p>}
-
         {!loading && !error && posts.length === 0 && (
-          <p className="public-muted">No posts yet — check back soon.</p>
+          <p className="public-muted">New guides are on their way. Check back soon.</p>
         )}
 
-        <div className="blog-card-grid">
-          {posts.map((post) => (
-            <article key={post.id} className="blog-card">
-              <p className="blog-card-meta">{formatDate(post.publishedAt)}</p>
-              <h2>
-                <Link to={`/blog/${post.slug}`}>{post.title}</Link>
-              </h2>
-              <p>{post.excerpt}</p>
-              {Array.isArray(post.tags) && post.tags.length > 0 && (
-                <div className="blog-tag-row">
-                  {post.tags.map((tag) => (
-                    <span key={tag} className="blog-tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <Link to={`/blog/${post.slug}`} className="blog-card-link">
-                Read article →
-              </Link>
-            </article>
-          ))}
-        </div>
+        {featured && <PostCard post={featured} featured />}
+        {rest.length > 0 && (
+          <div className="blog-grid">
+            {rest.map((post) => (
+              <PostCard key={post.id || post.slug} post={post} />
+            ))}
+          </div>
+        )}
       </main>
       <footer className="public-footer">
         <Link to="/">Home</Link>

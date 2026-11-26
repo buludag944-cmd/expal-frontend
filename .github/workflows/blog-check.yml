@@ -1,0 +1,53 @@
+name: Blog check
+
+# Runs on every pull request that touches the blog. A broken article
+# (missing official source, broken link, bad SEO fields) fails the check,
+# so it can't be merged by accident. Cover images are attached to the run
+# so they can be previewed before merging.
+on:
+  pull_request:
+    paths:
+      - "content/blog/**"
+      - "scripts/blog/**"
+      - "src/components/BlogBody.jsx"
+      - "src/pages/public/Blog*.jsx"
+      - "src/lib/blogApi.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Unit tests for the blog scripts
+        run: node --test scripts/blog/lib.test.mjs
+
+      - name: Check articles and open every link
+        run: node scripts/blog/check-sources.mjs --report blog-report.md
+
+      - name: Add the report to the run summary
+        if: always()
+        run: cat blog-report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: Render cover images (preview)
+        run: node scripts/blog/build-static-blog.mjs
+
+      - name: Upload cover images
+        uses: actions/upload-artifact@v4
+        with:
+          name: blog-covers
+          path: public/images/blog/auto/
+          retention-days: 14

@@ -3,25 +3,21 @@ import { Link, useParams } from "react-router-dom";
 import BlogBody from "../../components/BlogBody";
 import PublicSiteHeader from "../../components/PublicSiteHeader";
 import Seo from "../../components/Seo";
-import { fetchPostBySlug } from "../../lib/blogApi";
+import { fetchPostBySlug, fetchPublishedPosts } from "../../lib/blogApi";
+import { PostCard, formatDate, readingMinutes } from "./BlogList";
 import "../../styles/public-marketing.css";
+import "../../styles/blog.css";
 
-function formatDate(iso) {
-  if (!iso) return "";
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch {
-    return "";
-  }
+function authorName(author) {
+  if (!author) return "EXPal editorial";
+  if (typeof author === "string") return author;
+  return `${author.firstName || ""} ${author.lastName || ""}`.trim() || "EXPal editorial";
 }
 
 export default function BlogPostPage() {
   const { slug } = useParams();
   const [post, setPost] = useState(null);
+  const [related, setRelated] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -29,77 +25,119 @@ export default function BlogPostPage() {
     let cancelled = false;
     setLoading(true);
     setError("");
+    setPost(null);
     fetchPostBySlug(slug)
       .then((data) => {
         if (cancelled) return;
-        if (!data) setError("Post not found.");
+        if (!data) setError("We couldn't find this article.");
         else setPost(data);
       })
       .catch(() => {
-        if (!cancelled) setError("Could not load this post.");
+        if (!cancelled) setError("We couldn't load this article right now. Please try again in a moment.");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    fetchPublishedPosts()
+      .then((all) => {
+        if (!cancelled) setRelated(all.filter((p) => p.slug !== slug).slice(0, 3));
+      })
+      .catch(() => {});
+    window.scrollTo(0, 0);
     return () => {
       cancelled = true;
     };
   }, [slug]);
 
-  const authorName = post?.author
-    ? `${post.author.firstName || ""} ${post.author.lastName || ""}`.trim()
-    : "";
+  const mins = post ? readingMinutes(post) : null;
+  const category = post?.category || (Array.isArray(post?.tags) && post.tags[0]) || "";
 
   return (
-    <div className="public-page">
+    <div className="public-page blog-page">
       <Seo
         title={post?.seoTitle || post?.title || "Blog"}
-        description={post?.seoDescription || post?.excerpt || "EXPal expat guide"}
+        description={post?.seoDescription || post?.excerpt || "EXPal guide for expats in Ireland"}
         path={`/blog/${slug || ""}`}
         type="article"
         image={post?.coverImageUrl || undefined}
       />
       <PublicSiteHeader />
-      <main className="public-main blog-post-main">
-        <p className="blog-back">
-          <Link to="/blog">← All articles</Link>
-        </p>
+      <main className="public-main blog-article-wrap">
+        <nav className="blog-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/blog">Blog</Link>
+          {category && (
+            <>
+              <span aria-hidden="true">/</span>
+              <span>{category}</span>
+            </>
+          )}
+        </nav>
 
-        {loading && <p className="public-muted">Loading…</p>}
+        {loading && (
+          <div className="blog-article-skeleton" aria-hidden="true">
+            <span className="sk sk-title" />
+            <span className="sk sk-title short" />
+            <span className="sk sk-cover" />
+          </div>
+        )}
         {error && (
           <div className="public-error-block">
             <p className="public-error">{error}</p>
-            <Link to="/blog">Back to blog</Link>
+            <Link to="/blog">Browse all articles</Link>
           </div>
         )}
 
         {post && (
-          <article className="blog-article">
-            <header>
-              <p className="blog-card-meta">
-                {formatDate(post.publishedAt)}
-                {authorName ? ` · ${authorName}` : ""}
-              </p>
+          <article className="blog-article2">
+            <header className="blog-article2-header">
+              {category && <p className="blog-chip">{category}</p>}
               <h1>{post.title}</h1>
-              {post.excerpt && <p className="blog-article-deck">{post.excerpt}</p>}
+              {post.excerpt && <p className="blog-article2-deck">{post.excerpt}</p>}
+              <p className="blog-meta">
+                <span>{authorName(post.author)}</span>
+                <time dateTime={post.publishedAt}>{formatDate(post.publishedAt, "long")}</time>
+                {mins ? <span>{mins} min read</span> : null}
+              </p>
             </header>
+
             {post.coverImageUrl && (
-              <img
-                className="blog-cover"
-                src={post.coverImageUrl}
-                alt=""
-                loading="lazy"
-              />
+              <figure className="blog-article2-cover">
+                <img src={post.coverImageUrl} alt={post.coverAlt || ""} width="1200" height="630" />
+              </figure>
             )}
+
+            {post.lastReviewed && (
+              <p className="blog-reviewed">
+                <strong>Fact-checked against official sources</strong> · Last reviewed{" "}
+                {formatDate(post.lastReviewed, "long")}. Rules and fees can change, so always confirm on the
+                official pages linked below.
+              </p>
+            )}
+
             <BlogBody body={post.body} />
-            <div className="blog-article-cta">
-              <h2>Ready to settle with support?</h2>
-              <p>Join EXPal free — housing tips, visa tracking, and an expat community in one place.</p>
+
+            <aside className="blog-article-cta">
+              <h2>Your first 90 days in Ireland, organised</h2>
+              <p>
+                Track your residency days towards citizenship, find expat-friendly housing and meet people who've
+                been through it. Free.
+              </p>
               <Link to="/#sign-in" className="public-btn-primary">
-                Sign in or create account
+                Join EXPal free
               </Link>
-            </div>
+            </aside>
           </article>
+        )}
+
+        {post && related.length > 0 && (
+          <section className="blog-related" aria-labelledby="related-heading">
+            <h2 id="related-heading">Keep reading</h2>
+            <div className="blog-grid">
+              {related.map((p) => (
+                <PostCard key={p.id || p.slug} post={p} />
+              ))}
+            </div>
+          </section>
         )}
       </main>
       <footer className="public-footer">

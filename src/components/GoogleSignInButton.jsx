@@ -17,6 +17,7 @@ export default function GoogleSignInButton({ onError, disabled }) {
     setBusy(true);
     try {
       const idToken = await signInWithGoogleForBackend();
+      if (!idToken) return;
 
       const loginResult = await loginWithGoogle(idToken);
       if (!loginResult.success) {

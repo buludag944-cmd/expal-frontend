@@ -27,6 +27,7 @@ export function useGoogleAuthAction() {
     setError("");
     try {
       const idToken = await signInWithGoogleForBackend();
+      if (!idToken) return false;
       const loginResult = await loginWithGoogle(idToken);
       if (!loginResult.success) {
         setError(loginResult.error || "Google sign-in failed.");

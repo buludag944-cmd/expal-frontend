@@ -194,8 +194,18 @@ export async function signInWithGoogleNative() {
   throw new Error("Google sign-in did not return a token.");
 }
 
-/** Web Google sign-in — popup only (never redirect; WebView cannot complete redirect flows). */
-export async function signInWithGoogleWeb() {
+/** Phones block the Google popup. Send those browsers to Google in the same tab. */
+export function prefersGoogleRedirect(userAgent) {
+  return /Android|iPhone|iPad|iPod/i.test(String(userAgent || ""));
+}
+
+/** A blocked popup can be retried as a full-page Google sign-in. */
+export function popupFailureShouldRedirect(err) {
+  const code = String(err?.code || "");
+  return code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment";
+}
+
+async function webFirebaseAuth() {
   const { isNativeApp } = await import("./platform");
   if (isNativeApp()) {
     throw new Error(
@@ -203,13 +213,45 @@ export async function signInWithGoogleWeb() {
     );
   }
   const { getFirebaseAuth } = await import("./firebaseApp");
-  const { signInWithPopup } = await import("firebase/auth");
   const fb = getFirebaseAuth();
   if (!fb) {
     throw new Error("Google sign-in is not configured.");
   }
-  const result = await signInWithPopup(fb.auth, fb.googleProvider);
+  return fb;
+}
+
+/** After a full-page Google sign-in, the site loads again and this reads the result. */
+export async function completeGoogleRedirect() {
+  const { isNativeApp } = await import("./platform");
+  if (isNativeApp()) return null;
+  const { getFirebaseAuth } = await import("./firebaseApp");
+  const fb = getFirebaseAuth();
+  if (!fb) return null;
+  const { getRedirectResult } = await import("firebase/auth");
+  const result = await getRedirectResult(fb.auth);
+  if (!result?.user) return null;
   return result.user.getIdToken();
+}
+
+/** Web Google sign-in. Desktop uses a popup. Phones go to Google and come back. */
+export async function signInWithGoogleWeb() {
+  const fb = await webFirebaseAuth();
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  if (prefersGoogleRedirect(userAgent)) {
+    const { signInWithRedirect } = await import("firebase/auth");
+    await signInWithRedirect(fb.auth, fb.googleProvider);
+    return null;
+  }
+  try {
+    const { signInWithPopup } = await import("firebase/auth");
+    const result = await signInWithPopup(fb.auth, fb.googleProvider);
+    return result.user.getIdToken();
+  } catch (err) {
+    if (!popupFailureShouldRedirect(err)) throw err;
+    const { signInWithRedirect } = await import("firebase/auth");
+    await signInWithRedirect(fb.auth, fb.googleProvider);
+    return null;
+  }
 }
 
 /** Returns whichever token the backend accepts (Firebase JWT preferred). */

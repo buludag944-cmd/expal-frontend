@@ -564,6 +564,36 @@
   @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
 }
 
+/* Official-source notice on Journey. Visible in light and dark. */
+.official-sources {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(201, 59, 85, 0.35);
+  background: rgb(var(--card, 255 255 255));
+  color: rgb(var(--ink, 28 22 20));
+}
+.official-sources-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.official-sources-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.official-sources-list a {
+  color: rgb(var(--coral, 201 59 85));
+  font-weight: 650;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
 /* User-written text (posts, guides, messages, comments, bios, listings):
    keep the writer's line breaks and stop long words or links from overflowing. */
 .ugc-text {

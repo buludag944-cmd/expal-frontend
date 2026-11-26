@@ -20,6 +20,8 @@ test("maps questions to app features", () => {
 test("answers on its own when the server is down", () => {
   const a = localAnswer("What should I do first after arriving?", posts);
   expect(a.text).toMatch(/IRP/);
+  expect(a.text).toMatch(/not a government organisation/i);
+  expect(a.text).toMatch(/https:\/\/www\.gov\.ie\//);
   expect(a.guides.length).toBeGreaterThan(0);
   const none = localAnswer("qwerty zxcv", posts);
   expect(none.text).toMatch(/Community/);

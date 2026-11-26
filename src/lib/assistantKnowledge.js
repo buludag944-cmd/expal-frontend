@@ -2,6 +2,8 @@
 // links to the app's own source-checked guides and buttons that open the right EXPal screen.
 // It also answers on its own when the server can't be reached. No paid AI service is used.
 
+import { NOT_GOVERNMENT_DISCLAIMER, OFFICIAL_SOURCES } from "./officialSources";
+
 export const FEATURES = [
   {
     id: "scam",
@@ -128,7 +130,9 @@ export function firstStepsAnswer() {
     "- **Get a PPS number** once you have a reason, such as a job offer.",
     "- **Open a bank account and set up tax** with Revenue so you're not put on emergency tax.",
     "- **Register with a GP** and sort out somewhere longer-term to live.",
-    "Our guides below walk through each step with official sources.",
+    "Our guides below walk through each step. EXPal is not the government.",
+    NOT_GOVERNMENT_DISCLAIMER,
+    ...OFFICIAL_SOURCES.map((source) => `- ${source.label}: ${source.href}`),
   ].join("\n");
 }
 

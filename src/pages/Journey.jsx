@@ -17,6 +17,7 @@ import {
 import { getApiBaseUrl } from "../apiConfig";
 import { isNativeApp } from "../lib/platform";
 import MobileVisaTracker from "./mobile/MobileVisaTracker";
+import OfficialSources from "../components/OfficialSources";
 
 const TABS = ["Visa guide", "Timeline", "Residency", "Documents", "Career"];
 
@@ -349,6 +350,8 @@ export default function Journey() {
           </span>
         )}
       </div>
+
+      <OfficialSources />
 
       <div className="flex gap-1 overflow-x-auto border-b border-border pb-1">
         {TABS.map((t) => (

@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["TEAMID.com.yourbrand.expal"],
+        "appIDs": ["R7H563878X.com.yourbrand.expal"],
         "components": [
           { "/": "/verify/" },
           { "/": "/reset/" },

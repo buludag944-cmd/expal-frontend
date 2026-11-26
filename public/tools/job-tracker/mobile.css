@@ -19,7 +19,8 @@
   .search-box input, .toolbar select { font-size: 16px; height: 44px; }
   input, select, textarea { font-size: 16px !important; }
   label { font-size: 13px; }
-  .board { grid-template-columns: repeat(5, minmax(250px, 82vw)); scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+  .board-scroll { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scroll-padding-left: 2px; }
+  .board { grid-template-columns: repeat(5, minmax(250px, 82vw)); }
   .board > * { scroll-snap-align: start; }
   dialog { width: calc(100% - 24px); max-height: calc(100dvh - 24px); }
   .toast { left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }

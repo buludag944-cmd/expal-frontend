@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { getApiBaseUrl, PRODUCTION_API_URL } from "./apiConfig";
 import { syncPushTokenIfGranted, ensurePushPermissionOnce, unregisterPushDevice } from "./lib/pushNotifications";
 import { isNativeApp } from "./lib/platform";
+import { completeGoogleRedirect } from "./lib/googleSignIn";
 
 const AuthContext = createContext();
 const API = getApiBaseUrl();
@@ -192,6 +193,27 @@ export const AuthProvider = ({ children }) => {
     };
   }, [token, clearSession]);
 
+  const loginWithGoogleRef = useRef(null);
+
+  useEffect(() => {
+    if (isNativeApp()) return undefined;
+    let cancelled = false;
+    completeGoogleRedirect()
+      .then(async (idToken) => {
+        if (!idToken || cancelled) return;
+        const result = await loginWithGoogleRef.current(idToken);
+        if (!cancelled && result && !result.success) {
+          setAuthNotice(result.error || "Google sign-in failed.");
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setAuthNotice(err?.message || "Google sign-in failed.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     if (token && user) {
       // Soft prompt once after login so lock-screen push can work; then keep token fresh.
@@ -202,6 +224,7 @@ export const AuthProvider = ({ children }) => {
   }, [token, user]);
 
   const loginWithGoogle = async (idToken) => {
+    if (!idToken) return { success: false, error: "Google sign-in did not return a token." };
     const url = `${API}/api/auth/google`;
     const unreachable = isNativeApp()
       ? BACKEND_UNREACHABLE_NATIVE
@@ -280,6 +303,7 @@ export const AuthProvider = ({ children }) => {
       }
     }
   };
+  loginWithGoogleRef.current = loginWithGoogle;
 
   const loginWithApple = async (idToken, extras = {}) => {
     const url = `${API}/api/auth/apple`;

@@ -28,6 +28,7 @@ export default function PublicSiteHeader({ variant = "light", signInTo = "/#sign
         <Link to="/">Home</Link>
         <Link to="/blog">Blog</Link>
         <Link to="/job-tracker">Job tracker</Link>
+        <Link to="/scam-checker">Scam checker</Link>
         {user ? (
           <Link to="/" className="public-site-cta">
             Open app

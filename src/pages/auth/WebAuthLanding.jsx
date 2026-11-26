@@ -154,6 +154,7 @@ export default function WebAuthLanding() {
         <nav className="landing-nav" aria-label="Primary">
           <a href="/">Home</a>
           <Link to="/job-tracker">Job tracker</Link>
+          <Link to="/scam-checker">Scam checker</Link>
           {user ? (
             <Link to="/">Open app</Link>
           ) : (
@@ -340,6 +341,7 @@ export default function WebAuthLanding() {
             <Link to="/privacy">Cookies</Link>
             <Link to="/blog">Blog</Link>
             <Link to="/job-tracker">Job tracker</Link>
+            <Link to="/scam-checker">Scam checker</Link>
             <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
               App Store
             </a>

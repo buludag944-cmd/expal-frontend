@@ -132,6 +132,21 @@ export default function Home() {
         </div>
       )}
 
+      <div className="grid gap-2 sm:grid-cols-3 mb-4">
+        <Link to="/messages" className="expal-card !py-3 !px-3.5">
+          <p className="font-display text-sm font-bold">Messages</p>
+          <p className="text-[11px] text-[rgb(var(--ink-soft))] mt-0.5">Edit or delete a message you sent</p>
+        </Link>
+        <Link to="/scam-checker" className="expal-card !py-3 !px-3.5">
+          <p className="font-display text-sm font-bold">Rental scam checker</p>
+          <p className="text-[11px] text-[rgb(var(--ink-soft))] mt-0.5">Check a listing before you pay</p>
+        </Link>
+        <Link to="/job-tracker" className="expal-card !py-3 !px-3.5">
+          <p className="font-display text-sm font-bold">Job tracker</p>
+          <p className="text-[11px] text-[rgb(var(--ink-soft))] mt-0.5">Track applications and next steps</p>
+        </Link>
+      </div>
+
       <div>
         <p className="font-display text-[13px] font-bold text-[rgb(var(--ink))] mb-2">Urgent tasks</p>
         <div className="expal-card !py-2 !px-3.5">

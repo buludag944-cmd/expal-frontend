@@ -11,6 +11,7 @@
     "@capacitor/ios": "^8.3.4",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "@resvg/resvg-js": "^2.6.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -28,7 +29,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "prebuild": "node scripts/ensure-logo.js",
+    "prebuild": "node scripts/ensure-logo.js && node scripts/blog/build-static-blog.mjs",
     "build": "react-scripts build",
     "build:netlify": "bash scripts/build-netlify.sh",
     "netlify:zip": "bash scripts/package-netlify-zip.sh",
@@ -49,7 +50,12 @@
     "logo:apply": "node scripts/apply-logo.js",
     "android:release": "cd android && ./gradlew bundleRelease",
     "android:bundle": "bash scripts/build-android-bundle.sh",
-    "store:prep": "npm run build:netlify && npm run logo:apply -- --cap && npx cap sync android"
+    "store:prep": "npm run build:netlify && npm run logo:apply -- --cap && npx cap sync android",
+    "postbuild": "node scripts/blog/prerender-blog.mjs",
+    "blog:build": "node scripts/blog/build-static-blog.mjs",
+    "blog:check": "node scripts/blog/check-sources.mjs",
+    "blog:check:offline": "node scripts/blog/check-sources.mjs --offline",
+    "test:blog": "node --test scripts/blog/lib.test.mjs"
   },
   "eslintConfig": {
     "extends": [

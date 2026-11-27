@@ -19,7 +19,7 @@ https://expalapp.netlify.app/blog with a generated cover image, a crawlable page
 ## Rules
 
 - **Facts:** every fee, deadline, office address and rule must come from the official source linked in `## Sources`. Never from memory.
-- **`lastReviewed`:** the date someone last checked the facts against the sources. It must be within 60 days of `publishDate`. The weekly check flags articles older than 180 days for re-review.
+- **`lastReviewed`:** the date someone last checked the facts against the sources. It must be within 100 days of `publishDate`, so a reviewed batch can be queued about 3 months ahead. The weekly check flags articles older than 180 days for re-review.
 - **No invented features:** only mention what EXPal really does today (residency clock, housing, community/events, referrals, job tracker).
 - **No personal data:** never include real people's names, documents or photos.
 - **Custom image:** add `coverImage: /images/blog/<file>.png` and put the file in `public/images/blog/`. Otherwise a branded cover is generated automatically.

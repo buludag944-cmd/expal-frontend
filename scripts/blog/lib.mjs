@@ -14,6 +14,10 @@ export const API_URL = (process.env.REACT_APP_API_URL || "https://expalapp-1.onr
 export const OFFICIAL_DOMAINS = [
   "gov.ie",
   "irishimmigration.ie",
+  "hia.ie",
+  "met.ie",
+  "ccpc.ie",
+  "garda.ie",
   "citizensinformation.ie",
   "revenue.ie",
   "hse.ie",
@@ -32,6 +36,8 @@ export const OFFICIAL_DOMAINS = [
   "hea.ie",
   "europa.eu",
 ];
+
+export const MAX_REVIEW_AGE_DAYS = 100;
 
 const REQUIRED = ["title", "slug", "excerpt", "seoTitle", "seoDescription", "publishDate", "lastReviewed"];
 
@@ -127,7 +133,8 @@ export function validatePost(post) {
   }
   if (post.lastReviewed && post.publishDate && isValidDate(post.lastReviewed) && isValidDate(post.publishDate)) {
     const ageDays = (Date.parse(post.publishDate) - Date.parse(post.lastReviewed)) / 86400000;
-    if (ageDays > 60) problems.push("lastReviewed is more than 60 days before publishDate — re-check the facts");
+    // Up to ~3 months lets a reviewed batch be queued for weekly publishing.
+    if (ageDays > MAX_REVIEW_AGE_DAYS) problems.push(`lastReviewed is more than ${MAX_REVIEW_AGE_DAYS} days before publishDate — re-check the facts`);
   }
   const words = post.body.split(/\s+/).filter(Boolean).length;
   if (words < 400) problems.push(`article is only ${words} words (min 400)`);

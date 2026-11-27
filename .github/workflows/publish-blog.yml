@@ -1,0 +1,50 @@
+name: Publish blog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "content/blog/**"
+  pull_request:
+    paths:
+      - "content/blog/**"
+      - "scripts/publish-blog.js"
+      - "scripts/wait-for-api.js"
+      - "src/lib/blogFrontMatter.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check posts without publishing
+        run: node scripts/publish-blog.js --dry-run --all
+
+  publish:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Wake the API
+        env:
+          API_URL: ${{ secrets.API_URL }}
+        run: node scripts/wait-for-api.js
+      - name: Publish changed posts
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          BLOG_PUBLISH_TOKEN: ${{ secrets.BLOG_PUBLISH_TOKEN }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: node scripts/publish-blog.js

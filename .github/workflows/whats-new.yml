@@ -1,0 +1,40 @@
+name: What's new
+
+on:
+  schedule:
+    # Every Monday 07:00 UTC. The script publishes on even ISO weeks,
+    # which is every other Monday. Run workflow publishes immediately.
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Write and publish the update
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CROSS_REPO_READ_TOKEN: ${{ secrets.CROSS_REPO_READ_TOKEN }}
+          API_URL: ${{ secrets.API_URL }}
+          BLOG_PUBLISH_TOKEN: ${{ secrets.BLOG_PUBLISH_TOKEN }}
+          WHATS_NEW_FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
+        run: node scripts/build-whats-new.js
+      - name: Save the post in the repo
+        run: |
+          git config user.name "EXPal"
+          git config user.email "editorial@expal.invalid"
+          git add -A content/blog
+          if git diff --staged --quiet; then
+            echo "No new post to save."
+            exit 0
+          fi
+          git commit -m "Add the what's new post [skip ci]"
+          git push

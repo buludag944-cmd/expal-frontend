@@ -70,5 +70,16 @@
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
     <script src="%PUBLIC_URL%/play-banner.js" defer></script>
+    <!-- Cloudflare Web Analytics (free, cookieless). Live site only: not in the iOS/Android apps or local builds. -->
+    <script>
+      (function () {
+        if (location.hostname !== "expalapp.netlify.app") return;
+        var s = document.createElement("script");
+        s.defer = true;
+        s.src = "https://static.cloudflareinsights.com/beacon.min.js";
+        s.setAttribute("data-cf-beacon", '{"token": "723e7c71e67149f3bafa14c1aeae88ac"}');
+        document.body.appendChild(s);
+      })();
+    </script>
   </body>
 </html>

@@ -1,0 +1,32 @@
+name: Release ready to test
+
+on:
+  workflow_run:
+    workflows: ["iOS TestFlight", "Android Play internal"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  notify:
+    if: github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Open one issue when both stores have finished
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          THIS_WORKFLOW: ${{ github.event.workflow_run.name }}
+          THIS_SHA: ${{ github.event.workflow_run.head_sha }}
+          THIS_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          THIS_HTML_URL: ${{ github.event.workflow_run.html_url }}
+        run: node scripts/release-ready.js

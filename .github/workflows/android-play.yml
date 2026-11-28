@@ -100,6 +100,7 @@ jobs:
           tracks: internal
           status: completed
           changesNotSentForReview: true
+          whatsNewDirectory: ${{ hashFiles('fastlane/metadata/android/whatsnew-en-US') != '' && 'fastlane/metadata/android' || '' }}
 
       - name: Delete signing files
         if: always()

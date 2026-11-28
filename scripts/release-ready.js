@@ -21,8 +21,9 @@ function promoteSteps() {
   return [
     "When it looks good, you do these taps yourself. This automation will not do them.",
     "",
-    "1. Play Console → Test and release → Internal testing → Promote to production.",
-    "2. App Store Connect → the app → add the build to a new version → Submit for Review.",
+    "1. If Play internal testing has no new Android build, open the Android Actions run, download expal-android-internal, and upload that file under Test and release → Internal testing → Create new release.",
+    "2. Play Console → Test and release → Internal testing → Promote to production.",
+    "3. App Store Connect → the app → add the build to a new version → Submit for Review.",
   ].join("\n");
 }
 

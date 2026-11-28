@@ -8,6 +8,9 @@ test("the Play workflow uploads only to internal testing and deletes secrets", (
   expect(yml).toMatch(/tags:\s*\n\s*- "android-\*"/);
   expect(yml).toMatch(/tracks: internal/);
   expect(yml).toMatch(/changesNotSentForReview: true/);
+  expect(yml).toMatch(/steps\.play\.outputs\.configured == 'true'/);
+  expect(yml).toMatch(/name: expal-android-internal/);
+  expect(yml).toMatch(/steps\.play\.outputs\.configured != 'true'/);
   expect(yml).not.toMatch(/production/);
   expect(yml).toMatch(/if: always\(\)/);
   expect(yml).toMatch(/rm -f android\/app\/google-services\.json/);

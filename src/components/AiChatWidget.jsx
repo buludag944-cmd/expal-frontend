@@ -13,10 +13,13 @@ const WELCOME =
   "Hi! I'm your **free EXPal guide** for life in Ireland. Ask me about IRP, PPS numbers, bank accounts, housing, jobs or rental scams, or say **my steps**.";
 
 const STORE_KEY = "expal_assistant_chat_v1";
+const BLOG_SITE = "https://expalapp.netlify.app";
 
 /** Routes with their own composer / bottom chrome — hide FAB so it does not cover Send. */
 function shouldHideAssistant(pathname) {
-  return pathname === "/messages" || pathname.startsWith("/messages/");
+  if (pathname === "/messages" || pathname.startsWith("/messages/")) return true;
+  // In the phone apps the job tracker is a full-screen tool with its own buttons.
+  return isNativeApp() && pathname === "/job-tracker";
 }
 
 /** **bold**, [links](url), bare URLs and "- " bullet lines. Internal links stay inside the app. */
@@ -34,7 +37,13 @@ function renderInline(text, keyBase) {
       const lm = t.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
       const href = lm ? lm[2] : t;
       const label = lm ? lm[1] : t.replace(/^https?:\/\//, "");
-      if (href.startsWith("/")) parts.push(<Link key={key} to={href}>{label}</Link>);
+      if (href.startsWith("/blog") && isNativeApp())
+        parts.push(
+          <a key={key} href={`${BLOG_SITE}${href}`} target="_blank" rel="noopener noreferrer">
+            {label}
+          </a>
+        );
+      else if (href.startsWith("/")) parts.push(<Link key={key} to={href}>{label}</Link>);
       else if (/^https?:/i.test(href))
         parts.push(
           <a key={key} href={href} target="_blank" rel="noopener noreferrer">
@@ -134,7 +143,9 @@ export default function AiChatWidget() {
   }, [open, posts.length]);
 
   useEffect(() => {
-    if (open && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!open || !scrollRef.current) return;
+    // Fresh chat: start at the top so the welcome text is visible on short phones.
+    scrollRef.current.scrollTop = messages.length === 1 && !busy ? 0 : scrollRef.current.scrollHeight;
   }, [messages, open, busy]);
 
   useEffect(() => {
@@ -227,12 +238,26 @@ export default function AiChatWidget() {
                 {m.role === "assistant" ? <RichText text={m.text} /> : <span className="ugc-text">{m.text}</span>}
                 {m.role === "assistant" && (m.guides?.length > 0 || m.actions?.length > 0) && (
                   <div className="assist-extras">
-                    {m.guides?.map((g) => (
-                      <Link key={g.slug} to={`/blog/${g.slug}`} className="assist-guide" onClick={() => native && setOpen(false)}>
-                        <span className="assist-guide-kicker">EXPal guide</span>
-                        <span className="assist-guide-title">{g.title}</span>
-                      </Link>
-                    ))}
+                    {m.guides?.map((g) =>
+                      native ? (
+                        // The blog lives on the website only, so the apps open the article in the phone's browser.
+                        <a
+                          key={g.slug}
+                          href={`${BLOG_SITE}/blog/${g.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="assist-guide"
+                        >
+                          <span className="assist-guide-kicker">EXPal guide · opens website</span>
+                          <span className="assist-guide-title">{g.title}</span>
+                        </a>
+                      ) : (
+                        <Link key={g.slug} to={`/blog/${g.slug}`} className="assist-guide">
+                          <span className="assist-guide-kicker">EXPal guide</span>
+                          <span className="assist-guide-title">{g.title}</span>
+                        </Link>
+                      )
+                    )}
                     {m.actions?.length > 0 && (
                       <div className="assist-actions">
                         {m.actions.map((a) => (

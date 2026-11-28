@@ -1310,8 +1310,8 @@ function MainApp() {
               </AuthPageShell>
             }
           />
-          <Route path="/blog" element={<BlogList />} />
-          <Route path="/blog/:slug" element={<BlogPostPage />} />
+          <Route path="/blog" element={isNativeApp() ? <Navigate to="/" replace /> : <BlogList />} />
+          <Route path="/blog/:slug" element={isNativeApp() ? <Navigate to="/" replace /> : <BlogPostPage />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/child-safety" element={<ChildSafetyStandards />} />
@@ -1352,8 +1352,8 @@ function MainApp() {
                 </AuthPageShell>
               }
             />
-            <Route path="/blog" element={<BlogList />} />
-            <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/blog" element={isNativeApp() ? <Navigate to="/" replace /> : <BlogList />} />
+            <Route path="/blog/:slug" element={isNativeApp() ? <Navigate to="/" replace /> : <BlogPostPage />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/delete-account" element={<DeleteAccount />} />
             <Route path="/child-safety" element={<ChildSafetyStandards />} />
